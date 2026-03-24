@@ -12,7 +12,7 @@ import { useEffect } from "react";
 import PageNotFound from "./pages/PageNotFound";
 import Home from "./pages/Home";
 import ExploreCampaigns from "./pages/ExploreCampaigns";
-// import CampaignDetails from "./pages/CampaignDetails";
+import CampaignDetails from "./pages/CampaignDetails";
 import CreateCampaign from "./pages/CreateCampaign";
 import CreatorDashboard from "./pages/CreatorDashboard";
 // import HospitalDashboard from "./pages/HospitalDashboard";
@@ -66,7 +66,7 @@ const AppRoutes = () => {
             {/* Journey 1: The Donor */}
             <Route path="/" element={<Home />} />
             <Route path="/campaigns" element={<ExploreCampaigns />} />
-           {/*  <Route path="/campaigns/:id" element={<CampaignDetails />} /> */}
+            <Route path="/campaigns/:id" element={<CampaignDetails />} />
 
             {/* <Route
               path="/request-hospital-verification"
