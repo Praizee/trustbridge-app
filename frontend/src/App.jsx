@@ -13,11 +13,11 @@ import PageNotFound from "./pages/PageNotFound";
 import Home from "./pages/Home";
 // import ExploreCampaigns from "./pages/ExploreCampaigns";
 // import CampaignDetails from "./pages/CampaignDetails";
-// import CreateCampaign from "./pages/CreateCampaign";
-// import CreatorDashboard from "./pages/CreatorDashboard";
+import CreateCampaign from "./pages/CreateCampaign";
+import CreatorDashboard from "./pages/CreatorDashboard";
 // import HospitalDashboard from "./pages/HospitalDashboard";
 // import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-// import UserNotRegisteredError from "@/components/UserNotRegisteredError";
+import UserNotRegisteredError from "@/components/UserNotRegisteredError";
 // import Login from "./pages/Login";
 // import Register from "./pages/Register";
 // import RequestHospitalVerification from "./pages/RequestHospitalVerification";
@@ -74,8 +74,8 @@ const AppRoutes = () => {
             /> */}
 
             {/* Journey 2: The Creator */}
-            {/* <Route path="/create" element={<CreateCampaign />} />
-            <Route path="/creator" element={<CreatorDashboard />} /> */}
+            <Route path="/create" element={<CreateCampaign />} />
+            <Route path="/creator" element={<CreatorDashboard />} />
 
             {/* Journey 3: The Hospital */}
             {/* <Route path="/admin" element={<HospitalDashboard />} /> */}
