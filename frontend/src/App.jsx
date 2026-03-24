@@ -18,8 +18,8 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 // import HospitalDashboard from "./pages/HospitalDashboard";
 // import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import UserNotRegisteredError from "@/components/UserNotRegisteredError";
-// import Login from "./pages/Login";
-// import Register from "./pages/Register";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 // import RequestHospitalVerification from "./pages/RequestHospitalVerification";
 
 import Layout from "./Layout";
@@ -85,8 +85,8 @@ const AppRoutes = () => {
           </Route>
 
           {/* Auth Routes */}
-          {/* <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} /> */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Fallback */}
           <Route path="*" element={<PageNotFound />} />
