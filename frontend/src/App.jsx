@@ -17,8 +17,8 @@ import CreateCampaign from "./pages/CreateCampaign";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import UserNotRegisteredError from "@/components/UserNotRegisteredError";
 import RequestHospitalVerification from "./pages/RequestHospitalVerification";
-// import HospitalDashboard from "./pages/HospitalDashboard";
-// import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import HospitalDashboard from "./pages/HospitalDashboard";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
@@ -77,10 +77,10 @@ const AppRoutes = () => {
             <Route path="/creator" element={<CreatorDashboard />} />
 
             {/* Journey 3: The Hospital */}
-            {/* <Route path="/admin" element={<HospitalDashboard />} /> */}
+            <Route path="/admin" element={<HospitalDashboard />} />
 
             {/* TrustBridge Ops */}
-            {/* <Route path="/super-admin" element={<SuperAdminDashboard />} /> */}
+            <Route path="/super-admin" element={<SuperAdminDashboard />} />
           </Route>
 
           {/* Auth Routes */}
