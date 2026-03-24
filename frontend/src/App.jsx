@@ -19,8 +19,8 @@ import UserNotRegisteredError from "@/components/UserNotRegisteredError";
 import RequestHospitalVerification from "./pages/RequestHospitalVerification";
 // import HospitalDashboard from "./pages/HospitalDashboard";
 // import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-// import Login from "./pages/Login";
-// import Register from "./pages/Register";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 import Layout from "./Layout";
 
@@ -67,7 +67,10 @@ const AppRoutes = () => {
             <Route path="/" element={<Home />} />
             <Route path="/campaigns" element={<ExploreCampaigns />} />
             <Route path="/campaigns/:id" element={<CampaignDetails />} />
-            <Route path="/request-hospital-verification" element={<RequestHospitalVerification />} />
+            <Route
+              path="/request-hospital-verification"
+              element={<RequestHospitalVerification />}
+            />
 
             {/* Journey 2: The Creator */}
             <Route path="/create" element={<CreateCampaign />} />
@@ -81,8 +84,8 @@ const AppRoutes = () => {
           </Route>
 
           {/* Auth Routes */}
-          {/* <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} /> */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Fallback */}
           <Route path="*" element={<PageNotFound />} />
