@@ -15,12 +15,12 @@ import ExploreCampaigns from "./pages/ExploreCampaigns";
 import CampaignDetails from "./pages/CampaignDetails";
 import CreateCampaign from "./pages/CreateCampaign";
 import CreatorDashboard from "./pages/CreatorDashboard";
+import UserNotRegisteredError from "@/components/UserNotRegisteredError";
+import RequestHospitalVerification from "./pages/RequestHospitalVerification";
 // import HospitalDashboard from "./pages/HospitalDashboard";
 // import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-import UserNotRegisteredError from "@/components/UserNotRegisteredError";
 // import Login from "./pages/Login";
 // import Register from "./pages/Register";
-// import RequestHospitalVerification from "./pages/RequestHospitalVerification";
 
 import Layout from "./Layout";
 
@@ -67,11 +67,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Home />} />
             <Route path="/campaigns" element={<ExploreCampaigns />} />
             <Route path="/campaigns/:id" element={<CampaignDetails />} />
-
-            {/* <Route
-              path="/request-hospital-verification"
-              element={<RequestHospitalVerification />}
-            /> */}
+            <Route path="/request-hospital-verification" element={<RequestHospitalVerification />} />
 
             {/* Journey 2: The Creator */}
             <Route path="/create" element={<CreateCampaign />} />
