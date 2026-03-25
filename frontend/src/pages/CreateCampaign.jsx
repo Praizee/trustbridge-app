@@ -26,7 +26,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { API_URL, createCampaign } from "@/lib/api";
+import { API_URL, createCampaign, getHospitals } from "@/lib/api";
 
 const STEPS = ["Campaign Info", "Hospital & Details", "Media & Docs", "Review"];
 
@@ -45,21 +45,7 @@ export default function CreateCampaign() {
   const [hospitals, setHospitals] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const testdata = {
-    patient_name: "Lorem-13443",
-    title: "Lorem 1",
-    diagnosis_summary: "Lorem 2",
-    story: "Lorem 3",
-    target_amount: "10000",
-    hospital_id: "1",
-    category: "surgery",
-    beneficiary_name: "Lorem 1432",
-    contact_phone: "08123456789",
-    medical_document: {},
-    images: [],
-    video: null,
-  };
-  const emptydata = {
+  const [form, setForm] = useState({
     patient_name: "",
     title: "",
     diagnosis_summary: "",
@@ -72,27 +58,14 @@ export default function CreateCampaign() {
     medical_document: null,
     images: [],
     video: null,
-  };
-  const [form, setForm] = useState(testdata);
-  console.log(JSON.stringify(form));
-  console.log(form);
+  });
 
   const setFormValue = (key, val) =>
     setForm((prev) => ({ ...prev, [key]: val }));
 
   useEffect(() => {
-    fetch(`${API_URL}/hospitals/index.php`)
-      .then((res) => {
-        if (!res.ok) {
-          return fetch("/api/hospitals"); // fallback if setup allows
-        }
-        return res;
-      })
-      .then((res) => res.json())
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data.data || [];
-        setHospitals(list);
-      })
+    getHospitals()
+      .then((list) => setHospitals(list))
       .catch(console.error);
   }, []);
 
@@ -697,4 +670,3 @@ export default function CreateCampaign() {
     </div>
   );
 }
-
