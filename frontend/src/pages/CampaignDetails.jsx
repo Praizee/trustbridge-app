@@ -22,9 +22,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import DonationWidget from "@/components/trustbridge/DonationWidget";
-import { getCampaignDetails, getCampaignProgress } from "@/lib/api";
-
-const BASE_URL = "https://trust.ezirimkingdom.com.ng";
+import { BASE_URL, getCampaignDetails, getCampaignProgress } from "@/lib/api";
 
 const MOCK_DONORS = [];
 

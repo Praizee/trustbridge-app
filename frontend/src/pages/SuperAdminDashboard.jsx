@@ -43,7 +43,7 @@ import {
   getCampaigns,
   getHospitals,
   updateCampaignStatus,
-  API_URL,
+  BASE_URL,
 } from "@/lib/api";
 
 export default function SuperAdminDashboard() {
@@ -381,8 +381,8 @@ export default function SuperAdminDashboard() {
                                 <a
                                   href={
                                     req.license_path
-                                      ? `${API_URL}/${req.license_path}`
-                                      : `${API_URL}/uploads/hospitals/${req.license_document}`
+                                      ? `${BASE_URL}/${req.license_path}`
+                                      : `${BASE_URL}/uploads/hospitals/${req.license_document}`
                                   }
                                   target="_blank"
                                   rel="noopener noreferrer"

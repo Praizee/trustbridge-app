@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import ProgressBar from "./ProgressBar";
+import { BASE_URL } from "@/lib/api";
 
-const BASE_URL = "https://trust.ezirimkingdom.com.ng";
-const FALLBACK = "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=600";
+const FALLBACK =
+  "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=600";
 
 function toFullUrl(path) {
   if (!path) return null;
@@ -48,7 +49,9 @@ function AutoCarousel({ cover_image, thumbnail, images }) {
           key={i}
           src={src}
           alt=""
-          onError={(e) => { e.target.src = FALLBACK; }}
+          onError={(e) => {
+            e.target.src = FALLBACK;
+          }}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 group-hover:scale-105 transition-transform duration-500 ${
             i === active ? "opacity-100" : "opacity-0"
           }`}
@@ -93,7 +96,6 @@ export default function CampaignCard({ campaign, index = 0 }) {
     >
       <Link to={`/campaigns/${campaign.id}`} className="block">
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg hover:border-slate-200 transition-all duration-300 h-full">
-
           <AutoCarousel
             cover_image={campaign.cover_image}
             thumbnail={campaign.thumbnail_image}
@@ -114,11 +116,15 @@ export default function CampaignCard({ campaign, index = 0 }) {
 
             <div className="flex justify-between items-center mt-3">
               <div>
-                <span className="text-base font-bold text-slate-800">₦{raised.toLocaleString()}</span>
+                <span className="text-base font-bold text-slate-800">
+                  ₦{raised.toLocaleString()}
+                </span>
                 <span className="text-xs text-slate-400 ml-1">raised</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-emerald-600">{pct}%</span>
+                <span className="text-xs font-semibold text-emerald-600">
+                  {pct}%
+                </span>
                 <button
                   onClick={(e) => e.preventDefault()}
                   className="p-1.5 rounded-full hover:bg-rose-50 transition-colors"
