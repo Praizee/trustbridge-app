@@ -21,6 +21,7 @@ import HospitalDashboard from "./pages/HospitalDashboard";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import PaymentCallback from "./pages/PaymentCallback"
 
 import Layout from "./Layout";
 
@@ -67,6 +68,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Home />} />
             <Route path="/campaigns" element={<ExploreCampaigns />} />
             <Route path="/campaigns/:id" element={<CampaignDetails />} />
+            <Route path="/payment/callback" element={<PaymentCallback />} />
             <Route
               path="/request-hospital-verification"
               element={<RequestHospitalVerification />}

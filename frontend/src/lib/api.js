@@ -457,7 +457,7 @@ export async function approveHospital(payload) {
  */
 export async function initializeDonation(payload) {
   // Bypass apiFetch so we can log the raw response before any unwrapping
-  const res = await fetch(`${API_URL}/donations/initialize.php`, {
+  const res = await fetch(`${API_URL}/donations/initiate.php`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
