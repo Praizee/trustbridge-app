@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,20 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, isLoading, error } = useAuthStore();
+  const [localError, setLocalError] = useState("");
+  const { login, isLoading, clearError } = useAuthStore();
   const navigate = useNavigate();
+
+  // Clear any stale global auth errors when entering/leaving the login page
+  useEffect(() => {
+    clearError();
+    return () => clearError();
+  }, []);
+
+  // Clear inline error as soon as user starts retyping
+  useEffect(() => {
+    setLocalError("");
+  }, [email, password]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +33,7 @@ export default function Login() {
       return;
     }
 
+    setLocalError("");
     try {
       await login({ email, password });
 
@@ -37,7 +50,10 @@ export default function Login() {
         navigate("/");
       }
     } catch (err) {
-      toast.error(err.message || "Failed to login");
+      const message =
+        err.message || "Invalid email or password. Please try again.";
+      setLocalError(message);
+      toast.error(message);
     }
   };
 
@@ -62,10 +78,10 @@ export default function Login() {
         <Card className="border-0 shadow-xl shadow-slate-200/50 ring-1 ring-slate-900/5 sm:rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl">
           <CardContent className="pt-8 px-8">
             <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
+              {localError && (
                 <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-2 mb-4">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
+                  <span>{localError}</span>
                 </div>
               )}
 
@@ -95,12 +111,12 @@ export default function Login() {
                   >
                     Password
                   </Label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                  <span
+                    className="text-sm text-slate-400 font-medium cursor-not-allowed"
+                    title="Password reset coming soon"
                   >
                     Forgot password?
-                  </Link>
+                  </span>
                 </div>
                 <div className="relative">
                   <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
@@ -148,4 +164,3 @@ export default function Login() {
     </div>
   );
 }
-

@@ -45,6 +45,15 @@ const LayoutWrapper = () => (
 const AppRoutes = () => {
   const { isLoading, error } = useAuthStore();
 
+  // Special full-screen error states (not login errors — those are handled in Login.jsx)
+  if (!isLoading && error === "user_not_registered") {
+    return <UserNotRegisteredError />;
+  }
+  if (!isLoading && error === "auth_required") {
+    window.location.href = "/login";
+    return null;
+  }
+
   return (
     <>
       <ScrollToTop />
@@ -52,15 +61,6 @@ const AppRoutes = () => {
         <div className="fixed inset-0 flex items-center justify-center">
           <div className="size-8 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
-      ) : error ? (
-        error === "user_not_registered" ? (
-          <UserNotRegisteredError />
-        ) : error === "auth_required" ? (
-          <>
-            {(window.location.href = "/login")}
-            {null}
-          </>
-        ) : null
       ) : (
         <Routes>
           <Route element={<LayoutWrapper />}>
