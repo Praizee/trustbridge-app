@@ -497,7 +497,7 @@ export default function CreatorDashboard() {
                         <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
                           <img
                             src={
-                              c.image_url ||
+                              c.cover_image ||
                               "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=160"
                             }
                             alt={c.title}
