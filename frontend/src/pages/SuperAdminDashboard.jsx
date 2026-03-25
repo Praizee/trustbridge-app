@@ -40,6 +40,9 @@ import { toast } from "sonner";
 import {
   getPendingHospitalRequests,
   approveHospital,
+  getCampaigns,
+  getHospitals,
+  updateCampaignStatus,
   API_URL,
 } from "@/lib/api";
 
@@ -58,11 +61,7 @@ export default function SuperAdminDashboard() {
   });
 
   const fetchAll = () => {
-    Promise.all([
-      fetch("/api/campaigns").then((r) => r.json()),
-      fetch("/api/hospitals").then((r) => r.json()),
-      getPendingHospitalRequests(),
-    ])
+    Promise.all([getCampaigns(), getHospitals(), getPendingHospitalRequests()])
       .then(([cData, hData, reqData]) => {
         setCampaigns(cData);
         setHospitals(hData);
@@ -86,15 +85,11 @@ export default function SuperAdminDashboard() {
     .filter((c) => c.status === "disbursed")
     .reduce((s, c) => s + (c.target_amount || 0), 0);
   const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
-  const totalRaised = campaigns.reduce((s, c) => s + (c.raised_amount || 0), 0);
+  //   const totalRaised = campaigns.reduce((s, c) => s + (c.raised_amount || 0), 0);
 
   const handleApprove = async (c) => {
     try {
-      await fetch(`/api/campaigns/${c.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "disbursed" }),
-      });
+      await updateCampaignStatus(c.id, "disbursed");
       toast.success(
         `✓ Disbursement approved — ₦${(c.target_amount || 0).toLocaleString()} released to ${c.hospital_name}`,
       );
@@ -107,11 +102,7 @@ export default function SuperAdminDashboard() {
 
   const handleReject = async (c) => {
     try {
-      await fetch(`/api/campaigns/${c.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "funded" }),
-      });
+      await updateCampaignStatus(c.id, "funded");
       toast.error(`Disbursement rejected for "${c.title}"`);
       fetchAll();
     } catch (err) {
@@ -173,7 +164,8 @@ export default function SuperAdminDashboard() {
     },
     {
       label: "Total Raised",
-      value: `₦${(totalRaised / 1_000_000).toFixed(1)}M`,
+      //   value: `₦${(totalRaised / 1_000_000).toFixed(1)}M`,
+      value: `₦0.0`,
       icon: TrendingUp,
       color: "text-emerald-600",
       bg: "bg-emerald-50",
@@ -218,7 +210,7 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {stats.map((stat, i) => (
@@ -385,15 +377,19 @@ export default function SuperAdminDashboard() {
                               </span>
                             </TableCell>
                             <TableCell>
-                              {req.license_path ? (
+                              {req.license_path || req.license_document ? (
                                 <a
-                                  href={`${API_URL}/${req.license_path}`}
+                                  href={
+                                    req.license_path
+                                      ? `${API_URL}/${req.license_path}`
+                                      : `${API_URL}/uploads/hospitals/${req.license_document}`
+                                  }
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-xs font-medium"
+                                  className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-xs font-medium bg-blue-50 px-3 py-1.5 rounded-md"
                                 >
                                   <FileText className="w-3.5 h-3.5" />
-                                  View Doc
+                                  View License
                                   <ExternalLink className="w-2.5 h-2.5" />
                                 </a>
                               ) : (
@@ -413,7 +409,7 @@ export default function SuperAdminDashboard() {
                                 <DialogTrigger asChild>
                                   <Button
                                     size="sm"
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-xs h-8 gap-1"
+                                    className="bg-green-600 hover:bg-green-700 text-xs h-8 gap-1"
                                     onClick={() => setSelectedRequest(req)}
                                   >
                                     <CheckCircle2 className="w-3 h-3" /> Approve
@@ -760,32 +756,33 @@ export default function SuperAdminDashboard() {
                             <TableCell>
                               <span className="flex items-center gap-1 text-sm text-slate-600">
                                 <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                {h.location}
+                                {h.address || h.location || "N/A"}
                               </span>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm text-slate-700">
-                                <p className="font-medium">{h.bank_name}</p>
+                                <p className="font-medium">
+                                  {h.bank_name || "Unknown Bank"}
+                                </p>
                                 <p className="text-xs text-slate-400">
-                                  {h.account_name}
+                                  {h.account_name || "No Name"}
                                 </p>
                               </div>
                             </TableCell>
                             <TableCell>
                               <span className="flex items-center gap-1.5 text-sm font-mono text-slate-700">
                                 <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                                {h.account_number}
+                                {h.bank_account || h.account_number || "N/A"}{" "}
+                                {h.bank_code ? `(${h.bank_code})` : ""}
                               </span>
                             </TableCell>
                             <TableCell>
                               <Badge
                                 className={
-                                  h.verified
-                                    ? "bg-emerald-100 text-emerald-700 border-0"
-                                    : "bg-red-100 text-red-700 border-0"
+                                  "bg-emerald-100 text-emerald-700 border-0"
                                 }
                               >
-                                {h.verified ? "✓ Verified" : "Pending"}
+                                ✓ Verified
                               </Badge>
                             </TableCell>
                           </TableRow>

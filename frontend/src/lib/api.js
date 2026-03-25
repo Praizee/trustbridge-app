@@ -49,6 +49,21 @@ export async function getCampaigns() {
 }
 
 /**
+ * Update Campaign Status
+ */
+export async function updateCampaignStatus(id, status) {
+  const data = await apiFetch(`/admin/campaigns/update-status.php`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ id, status }),
+  });
+  return data;
+}
+
+/**
  * GET /campaigns/show.php?id=:id
  * Returns full details of a single campaign.
  */
@@ -128,6 +143,15 @@ export async function requestHospitalVerification(formData) {
 }
 
 // ─── Hospitals ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /hospitals/index.php
+ * Returns list of verified hospitals
+ */
+export async function getHospitals() {
+  const data = await apiFetch("/hospitals/index.php");
+  return Array.isArray(data) ? data : (data?.data ?? []);
+}
 
 /**
  * GET /admin/hospital-requests.php
