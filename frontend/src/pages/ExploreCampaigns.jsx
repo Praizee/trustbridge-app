@@ -32,7 +32,7 @@ export default function ExploreCampaigns() {
   useEffect(() => {
     getCampaigns()
       .then((data) => {
-        console.log(data);
+        // console.log(data);
         setCampaigns(data);
         setIsLoading(false);
       })
