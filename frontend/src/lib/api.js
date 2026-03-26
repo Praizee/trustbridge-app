@@ -747,6 +747,65 @@ export async function initializeDonation(payload) {
   return result;
 }
 
+// --- Hospital Verification ----------------------------------------------------
+
+/**
+ * POST /hospitals/verify.php
+ * Verify hospital via TIN or CAC number.
+ *
+ * @param {{
+ *   hospital_name: string,
+ *   hospital_address: string,
+ *   verification_method: "TIN" | "CAC",
+ *   verification_value: string,
+ *   bank_account: string,
+ *   bank_name: string,
+ *   bank_code: string
+ * }} payload
+ */
+export async function verifyHospital(payload) {
+  const data = await apiFetch("/hospitals/verify.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * GET /hospitals/my-campaigns.php
+ * Returns hospital info and its attached campaigns (requires auth).
+ *
+ * Response shape: { hospital: { id, name, verified }, campaigns: [...] }
+ */
+export async function getHospitalCampaigns() {
+  const data = await apiFetch("/hospitals/my-campaigns.php", {
+    headers: { ...authHeaders() },
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * POST /withdrawals/request.php
+ * Request a withdrawal for a fully funded campaign.
+ *
+ * @param {{ campaign_id: number, amount: number }} payload
+ */
+export async function requestWithdrawal(payload) {
+  const data = await apiFetch("/withdrawals/request.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return data?.data ?? data;
+}
+
 /**
  * GET /donations/verify.php?reference=:ref
  *

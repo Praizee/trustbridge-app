@@ -20,6 +20,8 @@ import {
   Shield,
   Menu,
   X,
+  LogOut,
+  User,
 } from "lucide-react";
 
 const views = [
@@ -61,7 +63,13 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setMobileOpen(false);
+  };
 
   const currentView = getViewForPath(location.pathname);
 
@@ -151,13 +159,61 @@ const Navbar = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 h-9 text-sm"
-              onClick={handleStartCampaign}
-            >
-              Start Campaign
-            </Button>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 border-slate-200 text-sm font-medium gap-2"
+                    >
+                      <User className="size-3.5 text-emerald-600" />
+                      {user?.name ? user.name.split(" ")[0] : "Account"}
+                      <ChevronDown className="size-3.5 text-slate-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel className="text-xs text-slate-400 font-normal">
+                      {user?.email || "Signed in"}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 cursor-pointer gap-2"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="size-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 h-9 text-sm"
+                  onClick={handleStartCampaign}
+                >
+                  Start Campaign
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 border-slate-200 text-sm font-medium"
+                  onClick={() => navigate("/login")}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 h-9 text-sm"
+                  onClick={handleStartCampaign}
+                >
+                  Start Campaign
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -245,13 +301,31 @@ const Navbar = () => {
                 </div>
               </div>
 
-              <div className="pt-6 mt-auto">
+              <div className="pt-6 mt-auto space-y-3">
                 <Button
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-6 text-lg font-medium shadow-sm"
                   onClick={handleStartCampaign}
                 >
                   Start Campaign
                 </Button>
+                {isAuthenticated ? (
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl py-6 text-lg font-medium text-red-600 border-red-100 hover:bg-red-50 gap-2"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="size-5" />
+                    Sign Out
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl py-6 text-lg font-medium"
+                    onClick={() => { navigate("/login"); setMobileOpen(false); }}
+                  >
+                    Sign In
+                  </Button>
+                )}
               </div>
             </div>
           </motion.div>

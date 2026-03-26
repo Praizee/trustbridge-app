@@ -24,6 +24,7 @@ import {
   Video,
   ImageIcon,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { API_URL, createCampaign, getHospitals } from "@/lib/api";
@@ -135,14 +136,20 @@ export default function CreateCampaign() {
 
   // --- Handlers for file inputs ---
   const handleImagesChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 3) {
+    const newFiles = Array.from(e.target.files);
+    const combined = [...form.images, ...newFiles];
+    if (combined.length > 3) {
       toast.error("You can upload a maximum of 3 images.");
-      // Take only the first 3
-      setFormValue("images", files.slice(0, 3));
+      setFormValue("images", combined.slice(0, 3));
     } else {
-      setFormValue("images", files);
+      setFormValue("images", combined);
     }
+    // Reset input so the same file can be re-added if removed
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = (index) => {
+    setFormValue("images", form.images.filter((_, i) => i !== index));
   };
 
   return (
@@ -467,11 +474,23 @@ export default function CreateCampaign() {
                       className="absolute inset-0 opacity-0 cursor-pointer"
                     />
                   </Button>
-                  <span className="text-sm text-slate-600 truncate">
-                    {form.medical_document
-                      ? form.medical_document.name
-                      : "No file chosen"}
-                  </span>
+                  {form.medical_document ? (
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm text-slate-600 truncate">
+                        {form.medical_document.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFormValue("medical_document", null)}
+                        className="shrink-0 text-red-400 hover:text-red-600 transition-colors"
+                        title="Remove document"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-slate-400">No file chosen</span>
+                  )}
                 </div>
               </div>
 
@@ -484,35 +503,42 @@ export default function CreateCampaign() {
                   <Button
                     variant="outline"
                     className="relative shrink-0 overflow-hidden h-11 border-dashed"
+                    disabled={form.images.length >= 3}
                   >
                     <ImageIcon className="size-4 mr-2" />
-                    Upload Images
+                    {form.images.length >= 3 ? "Max reached" : "Add Image"}
                     <input
                       type="file"
-                      multiple
                       accept="image/*"
                       onChange={handleImagesChange}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                      disabled={form.images.length >= 3}
                     />
                   </Button>
-                  <span className="text-sm text-slate-600 truncate">
-                    {form.images.length > 0
-                      ? `${form.images.length} file(s) chosen`
-                      : "No files chosen"}
+                  <span className="text-sm text-slate-500">
+                    {form.images.length}/3 images
                   </span>
                 </div>
                 {form.images.length > 0 && (
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex gap-3 mt-3 flex-wrap">
                     {Array.from(form.images).map((file, i) => (
                       <div
                         key={i}
-                        className="w-16 h-16 rounded-lg bg-slate-100 border overflow-hidden"
+                        className="relative w-20 h-20 rounded-lg bg-slate-100 border overflow-hidden group"
                       >
                         <img
                           src={URL.createObjectURL(file)}
-                          alt="preview"
+                          alt={`preview ${i + 1}`}
                           className="w-full h-full object-cover"
                         />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(i)}
+                          className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove image"
+                        >
+                          <Trash2 className="size-5 text-white" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -538,9 +564,23 @@ export default function CreateCampaign() {
                       className="absolute inset-0 opacity-0 cursor-pointer"
                     />
                   </Button>
-                  <span className="text-sm text-slate-600 truncate">
-                    {form.video ? form.video.name : "No file chosen"}
-                  </span>
+                  {form.video ? (
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm text-slate-600 truncate">
+                        {form.video.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFormValue("video", null)}
+                        className="shrink-0 text-red-400 hover:text-red-600 transition-colors"
+                        title="Remove video"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-slate-400">No file chosen</span>
+                  )}
                 </div>
               </div>
 
