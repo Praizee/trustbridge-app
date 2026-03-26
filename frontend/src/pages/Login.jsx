@@ -51,9 +51,9 @@ export default function Login() {
 
       if (user?.role === "creator") {
         navigate("/creator");
-      } else if (user?.role === "hospital" || user?.role === "admin") {
+      } else if (user?.role === "hospital") {
         navigate("/admin");
-      } else if (user?.role === "super-admin" || user?.role === "super_admin") {
+      } else if (user?.role === "admin") {
         navigate("/super-admin");
       } else {
         navigate("/");
