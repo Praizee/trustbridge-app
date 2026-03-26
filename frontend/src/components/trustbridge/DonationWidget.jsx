@@ -107,8 +107,7 @@ export default function DonationWidget({ campaign }) {
         amount: koboAmount.toString(),
         currency: 566,
         cust_id: email.trim(),
-        site_redirect_url: `${window.location.origin}/payment/callback`,
-        onComplete: async function (response) {
+        site_redirect_url: `${window.location.origin}/payment/callback?txn_ref=${encodeURIComponent(reference)}&amount=${nairaAmount}`, onComplete: async function (response) {
           // 4. User completed payment — response.txnref is our reference
           const txnRef = response?.txnref || response?.txn_ref || reference;
 
