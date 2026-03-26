@@ -351,7 +351,7 @@ export default function CampaignDetails() {
                             </p>
                           </div>
                         )}
-                        {campaign.contact_phone && (
+                        {/* {campaign.contact_phone && (
                           <div>
                             <p className="text-xs text-slate-400 mb-1 uppercase tracking-wide">
                               Contact
@@ -364,9 +364,9 @@ export default function CampaignDetails() {
                               {campaign.contact_phone}
                             </a>
                           </div>
-                        )}
+                        )} */}
                       </div>
-                      {campaign.medical_document_path && (
+                      {/* {campaign.medical_document_path && (
                         <a
                           href={`${BASE_URL}/${campaign.medical_document_path}`}
                           target="_blank"
@@ -376,7 +376,7 @@ export default function CampaignDetails() {
                           <FileText className="w-4 h-4" />
                           View Medical Document
                         </a>
-                      )}
+                      )} */}
                     </div>
                   </motion.div>
                 )}
