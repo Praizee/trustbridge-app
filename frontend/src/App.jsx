@@ -15,6 +15,7 @@ import ExploreCampaigns from "./pages/ExploreCampaigns";
 import CampaignDetails from "./pages/CampaignDetails";
 import CreateCampaign from "./pages/CreateCampaign";
 import CreatorDashboard from "./pages/CreatorDashboard";
+import CreatorCampaignDetails from "./pages/CreatorCampaignDetails";
 import UserNotRegisteredError from "@/components/UserNotRegisteredError";
 import RequestHospitalVerification from "./pages/RequestHospitalVerification";
 import HospitalDashboard from "./pages/HospitalDashboard";
@@ -79,6 +80,10 @@ const AppRoutes = () => {
             {/* Journey 2: The Creator */}
             <Route path="/create" element={<CreateCampaign />} />
             <Route path="/creator" element={<CreatorDashboard />} />
+            <Route
+              path="/creator/campaigns/:id"
+              element={<CreatorCampaignDetails />}
+            />
 
             {/* Journey 3: The Hospital */}
             <Route path="/admin" element={<HospitalDashboard />} />
