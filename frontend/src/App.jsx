@@ -21,7 +21,9 @@ import HospitalDashboard from "./pages/HospitalDashboard";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import PaymentCallback from "./pages/PaymentCallback"
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import PaymentCallback from "./pages/PaymentCallback";
 
 import Layout from "./Layout";
 
@@ -88,6 +90,8 @@ const AppRoutes = () => {
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Fallback */}
           <Route path="*" element={<PageNotFound />} />

@@ -93,6 +93,29 @@ export async function getCampaignProgress(id) {
   return data?.data ?? data;
 }
 
+// --- Auth (Forgot/Reset Password) ---------------------------------------------
+export async function forgotPassword(email) {
+  const data = await apiFetch(`/auth/forgot-password.php`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+  return data;
+}
+
+export async function resetPassword(token, password) {
+  const data = await apiFetch(`/auth/reset-password.php`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token, password }),
+  });
+  return data;
+}
+
 /**
  * POST /campaigns/create.php  (requires auth, multipart/form-data)
  * @param {FormData} formData
@@ -155,24 +178,6 @@ export async function approveHospital(payload) {
   return data;
 }
 
-// --- Hospital Verification ----------------------------------------------------
-
-/**
- * POST /hospitals/verify.php
- * Verify hospital via TIN or CAC number.
- */
-export async function verifyHospital(payload) {
-  const data = await apiFetch("/hospitals/verify.php", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify(payload),
-  });
-  return data?.data ?? data;
-}
-
 /**
  * GET /hospitals/my-campaigns.php
  * Returns hospital info and its attached campaigns (requires auth).
@@ -184,21 +189,10 @@ export async function getHospitalCampaigns() {
   return data?.data ?? data;
 }
 
-/**
- * POST /withdrawals/request.php
- * Request a withdrawal for a fully funded campaign.
- */
-export async function requestWithdrawal(payload) {
-  const data = await apiFetch("/withdrawals/request.php", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify(payload),
-  });
-  return data?.data ?? data;
-}
+// export async function getHospitalCampaigns() {
+//   const data = await apiFetch("/hospitals/my-campaigns.php");
+//   return data?.data ?? data;
+// }
 
 // --- Donations ----------------------------------------------------------------
 
@@ -268,6 +262,7 @@ export async function initializeDonation(payload) {
  *   bank_code: string
  * }} payload
  */
+
 export async function verifyHospital(payload) {
   const data = await apiFetch("/hospitals/verify.php", {
     method: "POST",
@@ -294,10 +289,6 @@ export async function verifyHospital(payload) {
  * @param {string} reference  — DON_xxx / txn_ref value from Interswitch
  * @param {number} [amount]   — original amount in naira (not kobo)
  */
-export async function getHospitalCampaigns() {
-  const data = await apiFetch("/hospitals/my-campaigns.php");
-  return data?.data ?? data;
-}
 
 /**
  * POST /withdrawals/request.php
@@ -316,6 +307,18 @@ export async function requestWithdrawal(payload) {
   return data?.data ?? data;
 }
 
+// export async function requestWithdrawal(payload) {
+//   const data = await apiFetch("/withdrawals/request.php", {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//       ...authHeaders(),
+//     },
+//     body: JSON.stringify(payload),
+//   });
+//   return data?.data ?? data;
+// }
+
 /**
  * GET /donations/verify.php?reference=:ref
  *
@@ -324,12 +327,6 @@ export async function requestWithdrawal(payload) {
  *
  * @param {string} reference
  */
-export async function verifyDonation(reference) {
-  const data = await apiFetch(
-    `/donations/verify.php?reference=${encodeURIComponent(reference)}`,
-  );
-  return data?.data ?? data;
-}
 
 export async function verifyDonation(reference, amount) {
   const params = new URLSearchParams({ reference });
