@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -12,142 +14,133 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Upload,
-  FileCheck,
-  Send,
   Building2,
-  AlertCircle,
   CheckCircle2,
-  Clock,
   Banknote,
-  ExternalLink,
+  ShieldCheck,
+  LayoutList,
+  Wallet,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import ProgressBar from "@/components/trustbridge/ProgressBar";
+import {
+  getHospitalCampaigns,
+  verifyHospital,
+  requestWithdrawal,
+} from "@/lib/api";
+
+const STATUS_COLORS = {
+  active: "bg-blue-100 text-blue-700",
+  funded: "bg-emerald-100 text-emerald-700",
+  closed: "bg-slate-100 text-slate-600",
+  pending: "bg-amber-100 text-amber-700",
+};
 
 export default function HospitalDashboard() {
+  const [tab, setTab] = useState("campaigns");
+  const [hospital, setHospital] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [uploading, setUploading] = useState({});
+  const [requesting, setRequesting] = useState({});
 
-  const fetchCampaigns = () => {
-    fetch("/api/campaigns")
-      .then((res) => res.json())
-      .then((data) => {
-        setCampaigns(data);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setIsLoading(false);
-      });
+  const [verifyForm, setVerifyForm] = useState({
+    hospital_name: "",
+    hospital_address: "",
+    verification_method: "TIN",
+    verification_value: "",
+    bank_account: "",
+    bank_name: "",
+    bank_code: "",
+  });
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getHospitalCampaigns();
+      setHospital(data.hospital ?? null);
+      setCampaigns(data.campaigns ?? []);
+    } catch (err) {
+      toast.error(err.message || "Failed to load campaigns.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchCampaigns();
+    fetchData();
   }, []);
 
-  const allFunded = campaigns.filter(
-    (c) =>
-      c.status === "funded" ||
-      c.status === "disbursement_requested" ||
-      c.status === "disbursed",
-  );
-
-  const handleFileUpload = async (campaignId, e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading((prev) => ({ ...prev, [campaignId]: true }));
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setIsVerifying(true);
     try {
-      const { file_url } = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file }),
-      }).then((res) => res.json());
-      await fetch(`/api/campaigns/${campaignId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoice_url: file_url }),
-      });
-      toast.success("Invoice uploaded successfully!");
-      fetchCampaigns();
+      await verifyHospital(verifyForm);
+      toast.success("Hospital verified successfully!");
+      await fetchData();
+      setTab("campaigns");
     } catch (err) {
-      toast.error("Upload failed. Please try again.");
-      console.error(err);
-    }
-    setUploading((prev) => ({ ...prev, [campaignId]: false }));
-  };
-
-  const handleRequestDisbursement = async (campaign) => {
-    try {
-      await fetch(`/api/campaigns/${campaign.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "disbursement_requested" }),
-      });
-      toast.success("Disbursement request submitted!");
-      fetchCampaigns();
-    } catch (err) {
-      toast.error("Failed to submit request.");
-      console.error(err);
+      toast.error(err.message || "Verification failed. Please try again.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
-  const statusStyles = {
-    funded: {
-      label: "Awaiting Invoice",
-      color: "bg-blue-100 text-blue-700",
-      dot: "bg-blue-500",
-    },
-    disbursement_requested: {
-      label: "Pending Approval",
-      color: "bg-amber-100 text-amber-700",
-      dot: "bg-amber-500",
-    },
-    disbursed: {
-      label: "Disbursed",
-      color: "bg-emerald-100 text-emerald-700",
-      dot: "bg-emerald-500",
-    },
+  const handleRequestWithdrawal = async (campaign) => {
+    setRequesting((prev) => ({ ...prev, [campaign.id]: true }));
+    try {
+      await requestWithdrawal({
+        campaign_id: campaign.id,
+        amount: campaign.raised_amount,
+      });
+      toast.success("Withdrawal request submitted!");
+      await fetchData();
+    } catch (err) {
+      toast.error(err.message || "Failed to submit withdrawal request.");
+    } finally {
+      setRequesting((prev) => ({ ...prev, [campaign.id]: false }));
+    }
   };
 
-  const totalFunded = allFunded.reduce((s, c) => s + (c.target_amount || 0), 0);
-  const pendingInvoices = allFunded.filter(
-    (c) => c.status === "funded" && !c.invoice_url,
-  ).length;
-  const disbursedCount = allFunded.filter(
-    (c) => c.status === "disbursed",
-  ).length;
+  const isVerified = hospital?.verified === 1;
+  const totalRaised = campaigns.reduce((s, c) => s + (c.raised_amount || 0), 0);
+  const fullyFunded = campaigns.filter((c) => c.is_fully_funded).length;
 
   const stats = [
     {
-      label: "Funded Campaigns",
-      value: allFunded.length,
-      icon: CheckCircle2,
+      label: "Campaigns",
+      value: campaigns.length,
+      icon: LayoutList,
       color: "text-blue-600",
       bg: "bg-blue-50",
     },
     {
-      label: "Pending Invoices",
-      value: pendingInvoices,
-      icon: Clock,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-    },
-    {
-      label: "Total Disbursed",
-      value: disbursedCount,
-      icon: Banknote,
+      label: "Fully Funded",
+      value: fullyFunded,
+      icon: CheckCircle2,
       color: "text-emerald-600",
       bg: "bg-emerald-50",
     },
     {
-      label: "Total Value",
-      value: `₦${(totalFunded / 1_000_000).toFixed(1)}M`,
-      icon: Building2,
+      label: "Total Raised",
+      value: `₦${(totalRaised / 1_000).toFixed(0)}K`,
+      icon: Banknote,
       color: "text-purple-600",
       bg: "bg-purple-50",
     },
+    {
+      label: "Verified",
+      value: isVerified ? "Yes" : "No",
+      icon: ShieldCheck,
+      color: isVerified ? "text-emerald-600" : "text-amber-600",
+      bg: isVerified ? "bg-emerald-50" : "bg-amber-50",
+    },
+  ];
+
+  const tabs = [
+    { id: "campaigns", label: "My Campaigns", icon: LayoutList },
+    { id: "verification", label: "Verification", icon: ShieldCheck },
   ];
 
   return (
@@ -155,23 +148,24 @@ export default function HospitalDashboard() {
       {/* Header */}
       <div className="bg-white border-b border-slate-100 px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center gap-3 mb-1">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-slate-800">
-                  Hospital Admin
+                  {hospital?.name || "Hospital Dashboard"}
                 </h1>
                 <p className="text-slate-500 text-sm">
-                  Manage funded campaigns, upload invoices, and request
-                  disbursements.
+                  Manage campaigns, verification, and withdrawals.
                 </p>
               </div>
+              {isVerified && (
+                <span className="ml-auto flex items-center gap-1 text-emerald-600 text-xs font-medium bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Verified
+                </span>
+              )}
             </div>
           </motion.div>
         </div>
@@ -189,14 +183,10 @@ export default function HospitalDashboard() {
             >
               <Card className="shadow-sm border-slate-100">
                 <CardContent className="p-5">
-                  <div
-                    className={`w-9 h-9 ${stat.bg} rounded-lg flex items-center justify-center mb-3`}
-                  >
+                  <div className={`w-9 h-9 ${stat.bg} rounded-lg flex items-center justify-center mb-3`}>
                     <stat.icon className={`w-4 h-4 ${stat.color}`} />
                   </div>
-                  <p className="text-xl font-bold text-slate-800">
-                    {stat.value}
-                  </p>
+                  <p className="text-xl font-bold text-slate-800">{stat.value}</p>
                   <p className="text-xs text-slate-500 mt-0.5">{stat.label}</p>
                 </CardContent>
               </Card>
@@ -204,126 +194,98 @@ export default function HospitalDashboard() {
           ))}
         </div>
 
-        {/* Info Banner */}
-        {pendingInvoices > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-start gap-3 mb-6"
-          >
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-amber-800">
-                {pendingInvoices} campaign{pendingInvoices > 1 ? "s" : ""}{" "}
-                waiting for invoice upload
-              </p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Upload a stamped hospital invoice to unlock disbursement
-                requests.
-              </p>
-            </div>
-          </motion.div>
-        )}
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-white border border-slate-100 rounded-xl p-1 w-fit shadow-sm">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                tab === t.id
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <t.icon className="w-4 h-4" />
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="shadow-sm border-slate-100 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-semibold text-slate-700 text-sm">
-                Funded Campaigns
-              </h2>
-              <span className="text-xs text-slate-400">
-                {allFunded.length} total
-              </span>
-            </div>
-            {isLoading ? (
-              <div className="p-8 space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-12 bg-slate-100 rounded-lg animate-pulse"
-                  />
-                ))}
+        {/* Campaigns Tab */}
+        {tab === "campaigns" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="shadow-sm border-slate-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="font-semibold text-slate-700 text-sm">
+                  Attached Campaigns
+                </h2>
+                <span className="text-xs text-slate-400">
+                  {campaigns.length} total
+                </span>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50/60">
-                      <TableHead className="text-xs font-semibold text-slate-500">
-                        Campaign
-                      </TableHead>
-                      <TableHead className="text-xs font-semibold text-slate-500">
-                        Amount
-                      </TableHead>
-                      <TableHead className="text-xs font-semibold text-slate-500 min-w-[140px]">
-                        Progress
-                      </TableHead>
-                      <TableHead className="text-xs font-semibold text-slate-500">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-xs font-semibold text-slate-500">
-                        Invoice
-                      </TableHead>
-                      <TableHead className="text-xs font-semibold text-slate-500">
-                        Action
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allFunded.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-16">
-                          <div className="flex flex-col items-center gap-2 text-slate-400">
-                            <Building2 className="w-8 h-8 text-slate-200" />
-                            <p className="text-sm">No funded campaigns yet.</p>
-                            <p className="text-xs">
-                              Campaigns that reach their goal will appear here.
-                            </p>
-                          </div>
-                        </TableCell>
+
+              {isLoading ? (
+                <div className="p-8 space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/60">
+                        <TableHead className="text-xs font-semibold text-slate-500">
+                          Campaign
+                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">
+                          Target
+                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">
+                          Raised
+                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500 min-w-[140px]">
+                          Progress
+                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">
+                          Status
+                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">
+                          Action
+                        </TableHead>
                       </TableRow>
-                    ) : (
-                      allFunded.map((c) => {
-                        const s = statusStyles[c.status] || {
-                          label: c.status,
-                          color: "bg-slate-100 text-slate-600",
-                          dot: "bg-slate-400",
-                        };
-                        const hasInvoice = !!c.invoice_url;
-                        const isFull =
-                          (c.raised_amount || 0) >= (c.target_amount || 1);
-                        return (
+                    </TableHeader>
+                    <TableBody>
+                      {campaigns.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-16">
+                            <div className="flex flex-col items-center gap-2 text-slate-400">
+                              <Building2 className="w-8 h-8 text-slate-200" />
+                              <p className="text-sm">No campaigns attached yet.</p>
+                              <p className="text-xs">
+                                Campaigns created for your hospital will appear here.
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        campaigns.map((c) => (
                           <TableRow key={c.id} className="hover:bg-slate-50/50">
                             <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                                  <img
-                                    src={
-                                      c.image_url ||
-                                      "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=80"
-                                    }
-                                    alt={c.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-slate-800 text-sm leading-tight line-clamp-1 max-w-[180px]">
-                                    {c.title}
-                                  </p>
-                                  <p className="text-xs text-slate-400">
-                                    {c.patient_name}
-                                  </p>
-                                </div>
-                              </div>
+                              <p className="font-medium text-slate-800 text-sm line-clamp-1 max-w-[200px]">
+                                {c.title}
+                              </p>
+                              <p className="text-xs text-slate-400">{c.patient_name}</p>
                             </TableCell>
                             <TableCell>
                               <span className="font-semibold text-sm text-slate-800">
                                 ₦{(c.target_amount || 0).toLocaleString()}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-slate-600">
+                                ₦{(c.raised_amount || 0).toLocaleString()}
                               </span>
                             </TableCell>
                             <TableCell className="min-w-[140px]">
@@ -335,113 +297,190 @@ export default function HospitalDashboard() {
                               />
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1.5">
-                                <div
-                                  className={`w-1.5 h-1.5 rounded-full ${s.dot}`}
-                                />
-                                <Badge
-                                  className={`${s.color} border-0 text-xs`}
-                                >
-                                  {s.label}
-                                </Badge>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {hasInvoice ? (
-                                <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-medium">
-                                  <FileCheck className="w-3.5 h-3.5" />
-                                  <a
-                                    href={c.invoice_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-0.5 hover:underline"
-                                  >
-                                    View{" "}
-                                    <ExternalLink className="w-2.5 h-2.5" />
-                                  </a>
-                                </div>
-                              ) : isFull ? (
-                                <label className="cursor-pointer">
-                                  <input
-                                    type="file"
-                                    className="hidden"
-                                    accept=".pdf,.jpg,.png"
-                                    onChange={(e) => handleFileUpload(c.id, e)}
-                                  />
-                                  <div className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors">
-                                    <Upload className="w-3.5 h-3.5" />
-                                    {uploading[c.id]
-                                      ? "Uploading…"
-                                      : "Upload Invoice"}
-                                  </div>
-                                </label>
-                              ) : (
-                                <span className="flex items-center gap-1 text-slate-400 text-xs">
-                                  <AlertCircle className="w-3 h-3" /> Not funded
-                                </span>
-                              )}
+                              <Badge
+                                className={`${STATUS_COLORS[c.status] || "bg-slate-100 text-slate-600"} border-0 text-xs`}
+                              >
+                                {c.status}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <Button
                                 size="sm"
-                                disabled={!hasInvoice || c.status !== "funded"}
-                                onClick={() => handleRequestDisbursement(c)}
-                                className="text-xs h-8 bg-blue-600 hover:bg-blue-700 disabled:opacity-40"
+                                disabled={!c.is_fully_funded || !!requesting[c.id]}
+                                onClick={() => handleRequestWithdrawal(c)}
+                                className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40"
                               >
-                                <Send className="w-3 h-3 mr-1" />
-                                Request
+                                <Wallet className="w-3 h-3 mr-1" />
+                                {requesting[c.id] ? "Requesting…" : "Withdraw"}
                               </Button>
                             </TableCell>
                           </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </Card>
-        </motion.div>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </Card>
+          </motion.div>
+        )}
 
-        {/* Trust footer */}
-        <div className="mt-8 bg-white rounded-2xl border border-slate-100 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">
-            How Disbursement Works
-          </h3>
-          <div className="grid sm:grid-cols-3 gap-4">
-            {[
-              {
-                step: "1",
-                title: "Campaign Fully Funded",
-                desc: "Campaign reaches 100% of its target amount.",
-              },
-              {
-                step: "2",
-                title: "Upload Official Invoice",
-                desc: "Hospital uploads a stamped, official treatment invoice.",
-              },
-              {
-                step: "3",
-                title: "Funds Released",
-                desc: "After TrustBridge review, Interswitch settles funds to the hospital's verified account.",
-              },
-            ].map((item) => (
-              <div key={item.step} className="flex items-start gap-3">
-                <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-                  {item.step}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    {item.title}
+        {/* Verification Tab */}
+        {tab === "verification" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            {isVerified ? (
+              <Card className="shadow-sm border-slate-100">
+                <CardContent className="p-10 flex flex-col items-center text-center gap-4">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800">
+                      Hospital Verified
+                    </h3>
+                    <p className="text-slate-500 text-sm mt-1 max-w-sm">
+                      Your hospital is verified and visible to campaign creators when they
+                      select a hospital.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="shadow-sm border-slate-100">
+                <div className="px-5 py-4 border-b border-slate-100">
+                  <h2 className="font-semibold text-slate-700 text-sm">
+                    Verify Your Hospital
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Verification unlocks campaign attachment and fund withdrawals.
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">{item.desc}</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                <CardContent className="p-6">
+                  {!isLoading && !isVerified && (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl p-3 mb-6 max-w-lg">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-700">
+                        Your hospital is not yet verified. Complete the form below to get verified via TIN or CAC.
+                      </p>
+                    </div>
+                  )}
+                  <form onSubmit={handleVerify} className="space-y-5 max-w-lg">
+                    <div>
+                      <Label className="text-slate-700 text-sm">Hospital Name</Label>
+                      <Input
+                        className="mt-1"
+                        placeholder="University Teaching Hospital"
+                        value={verifyForm.hospital_name}
+                        onChange={(e) =>
+                          setVerifyForm((f) => ({ ...f, hospital_name: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-slate-700 text-sm">Hospital Address</Label>
+                      <Input
+                        className="mt-1"
+                        placeholder="Port Harcourt, Rivers State"
+                        value={verifyForm.hospital_address}
+                        onChange={(e) =>
+                          setVerifyForm((f) => ({ ...f, hospital_address: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-slate-700 text-sm">Verification Method</Label>
+                      <div className="flex gap-3 mt-2">
+                        {["TIN", "CAC"].map((method) => (
+                          <button
+                            key={method}
+                            type="button"
+                            onClick={() =>
+                              setVerifyForm((f) => ({ ...f, verification_method: method }))
+                            }
+                            className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
+                              verifyForm.verification_method === method
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+                            }`}
+                          >
+                            {method}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-slate-700 text-sm">
+                        {verifyForm.verification_method} Number
+                      </Label>
+                      <Input
+                        className="mt-1"
+                        placeholder={
+                          verifyForm.verification_method === "TIN"
+                            ? "08120451-1001"
+                            : "RC123456"
+                        }
+                        value={verifyForm.verification_value}
+                        onChange={(e) =>
+                          setVerifyForm((f) => ({ ...f, verification_value: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-slate-700 text-sm">Bank Account Number</Label>
+                        <Input
+                          className="mt-1"
+                          placeholder="0123456789"
+                          value={verifyForm.bank_account}
+                          onChange={(e) =>
+                            setVerifyForm((f) => ({ ...f, bank_account: e.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-slate-700 text-sm">Bank Code</Label>
+                        <Input
+                          className="mt-1"
+                          placeholder="044"
+                          value={verifyForm.bank_code}
+                          onChange={(e) =>
+                            setVerifyForm((f) => ({ ...f, bank_code: e.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-slate-700 text-sm">Bank Name</Label>
+                      <Input
+                        className="mt-1"
+                        placeholder="Access Bank"
+                        value={verifyForm.bank_name}
+                        onChange={(e) =>
+                          setVerifyForm((f) => ({ ...f, bank_name: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={isVerifying}
+                      className="bg-blue-600 hover:bg-blue-700 w-full"
+                    >
+                      <ShieldCheck className="w-4 h-4 mr-2" />
+                      {isVerifying ? "Verifying…" : "Verify Hospital"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
 }
-
