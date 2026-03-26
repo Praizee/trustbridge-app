@@ -13,19 +13,30 @@ import {
   Target,
   Eye,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import ProgressBar from "@/components/trustbridge/ProgressBar";
-import { getCampaigns } from "@/lib/api";
+import { getMyCampaigns, deleteCampaignCreator } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function CreatorDashboard() {
   const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState(null);
   console.log(campaigns);
 
   const fetchCampaigns = () => {
     setIsLoading(true);
-    getCampaigns()
+    getMyCampaigns()
       .then((data) => {
         setCampaigns(data);
         setIsLoading(false);
@@ -35,6 +46,21 @@ export default function CreatorDashboard() {
         toast.error("Failed to load campaigns.");
         setIsLoading(false);
       });
+  };
+
+  const handleDelete = async () => {
+    if (!campaignToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteCampaignCreator(campaignToDelete.id);
+      toast.success("Campaign deleted successfully");
+      setCampaigns((prev) => prev.filter((c) => c.id !== campaignToDelete.id));
+      setCampaignToDelete(null);
+    } catch (err) {
+      toast.error(err.message || "Failed to delete campaign");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   useEffect(() => {
@@ -224,6 +250,7 @@ export default function CreatorDashboard() {
                         <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
                           <img
                             src={
+                              c.thumbnail ||
                               c.cover_image ||
                               "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=160"
                             }
@@ -271,6 +298,13 @@ export default function CreatorDashboard() {
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </Link>
+                              <button
+                                onClick={() => setCampaignToDelete(c)}
+                                className="text-red-400 hover:text-red-600 transition-colors ml-1"
+                                title="Delete Campaign"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -283,6 +317,44 @@ export default function CreatorDashboard() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!campaignToDelete}
+        onOpenChange={(open) => !open && setCampaignToDelete(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Campaign</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this campaign? This action cannot
+              be undone and all associated data will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm mb-4">
+            <Trash2 className="w-5 h-5 shrink-0" />
+            <p>
+              Deleting: <strong>{campaignToDelete?.title}</strong>
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setCampaignToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete Campaign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

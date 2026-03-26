@@ -20,6 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Shield,
@@ -35,6 +37,7 @@ import {
   MapPin,
   CreditCard,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,6 +46,7 @@ import {
   getCampaigns,
   getHospitals,
   updateCampaignStatus,
+  deleteCampaignAdmin,
   BASE_URL,
 } from "@/lib/api";
 
@@ -52,6 +56,8 @@ export default function SuperAdminDashboard() {
   const [hospitalRequests, setHospitalRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState(null);
   const [reviewCampaign, setReviewCampaign] = useState(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -107,6 +113,21 @@ export default function SuperAdminDashboard() {
       fetchAll();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!campaignToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteCampaignAdmin(campaignToDelete.id);
+      toast.success("Campaign deleted successfully.");
+      setCampaignToDelete(null);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to delete campaign.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -818,13 +839,16 @@ export default function SuperAdminDashboard() {
                         <TableHead className="text-xs font-semibold text-slate-500">
                           Status
                         </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500 text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {campaigns.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={5}
+                            colSpan={6}
                             className="text-center py-12 text-slate-400 text-sm"
                           >
                             No campaigns yet.
@@ -878,6 +902,15 @@ export default function SuperAdminDashboard() {
                                   {(c.status || "").replace(/_/g, " ")}
                                 </Badge>
                               </TableCell>
+                              <TableCell className="text-right">
+                                <button
+                                  onClick={() => setCampaignToDelete(c)}
+                                  className="text-red-400 hover:text-red-600 transition-colors p-1"
+                                  title="Delete Campaign"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </TableCell>
                             </TableRow>
                           );
                         })
@@ -890,6 +923,44 @@ export default function SuperAdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Campaign Confirmation Dialog */}
+      <Dialog
+        open={!!campaignToDelete}
+        onOpenChange={(open) => !open && setCampaignToDelete(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Campaign</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this campaign? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm mb-4">
+            <Trash2 className="w-5 h-5 shrink-0" />
+            <p>
+              Deleting: <strong>{campaignToDelete?.title}</strong>
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setCampaignToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteCampaign}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete Campaign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -62,6 +62,18 @@ export async function getCampaigns() {
 }
 
 /**
+ * GET /campaign/my-campaigns.php
+ * Returns campaigns for the logged-in creator.
+ */
+export async function getMyCampaigns() {
+  const data = await apiFetch("/campaigns/my-campaigns.php");
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data?.campaigns)) return data.data.campaigns;
+  return [];
+}
+
+/**
  * Update Campaign Status
  */
 export async function updateCampaignStatus(id, status) {
@@ -71,6 +83,34 @@ export async function updateCampaignStatus(id, status) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ id, status }),
+  });
+  return data;
+}
+
+/**
+ * DELETE Campaign (Creator)
+ */
+export async function deleteCampaignCreator(campaign_id) {
+  const data = await apiFetch(`/campaign/delete.php`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ campaign_id }),
+  });
+  return data;
+}
+
+/**
+ * DELETE Campaign (Admin)
+ */
+export async function deleteCampaignAdmin(campaign_id) {
+  const data = await apiFetch(`/admin/campaigns/delete.php`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ campaign_id }),
   });
   return data;
 }
