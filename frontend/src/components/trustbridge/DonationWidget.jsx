@@ -54,8 +54,8 @@ export default function DonationWidget({ campaign }) {
   const [isDonating, setIsDonating] = useState(false);
   const [donationError, setDonationError] = useState(null);
 
-  const raised = campaign?.raised_amount || 0;
-  const target = campaign?.target_amount || 1;
+  const raised = Number(campaign?.raised_amount || 0);
+  const target = Number(campaign?.target_amount || 1);
   const percentage = Math.min((raised / target) * 100, 100);
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
@@ -64,11 +64,14 @@ export default function DonationWidget({ campaign }) {
   const parsedAmount = Number(amount);
   const amountValid = parsedAmount >= 100;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const canDonate = amountValid && emailValid && name.trim() && !isDonating;
+
+  // Name is only required when NOT donating anonymously
+  const nameValid = anonymous || name.trim().length > 0;
+  const canDonate = amountValid && emailValid && nameValid && !isDonating;
 
   // Preload script when component mounts so it's ready when user clicks
   useEffect(() => {
-    loadInterswitchScript().catch(() => {});
+    loadInterswitchScript().catch(() => { });
   }, []);
 
   const handleDonate = async () => {
@@ -77,7 +80,7 @@ export default function DonationWidget({ campaign }) {
     setIsDonating(true);
 
     try {
-      // 1. Initiate — get reference, amount, email from backend
+      // 1. Initiate — get reference from backend
       const initiated = await initializeDonation({
         campaign_id: campaign.id,
         name: anonymous ? "Anonymous" : name.trim(),
@@ -85,9 +88,11 @@ export default function DonationWidget({ campaign }) {
         amount: parsedAmount,
       });
 
-      const { reference, amount: confirmedAmount } = initiated;
+      const { reference } = initiated;
 
-      // 2. Ensure Interswitch inline script is loaded
+      const nairaAmount = parseInt(parsedAmount, 10);
+      const koboAmount = Math.round(Number(amount)) * 100;
+      console.log(koboAmount)
       await loadInterswitchScript();
 
       if (!window.webpayCheckout) {
@@ -99,42 +104,55 @@ export default function DonationWidget({ campaign }) {
         merchant_code: MERCHANT_CODE,
         pay_item_id: PAY_ITEM_ID,
         txn_ref: reference,
-        amount: (confirmedAmount ?? parsedAmount) * 100, // MUST be in kobo
-        currency: 566, // NGN
+        amount: koboAmount.toString(),
+        currency: 566,
         cust_id: email.trim(),
         site_redirect_url: `${window.location.origin}/payment/callback`,
-
         onComplete: async function (response) {
           // 4. User completed payment — response.txnref is our reference
           const txnRef = response?.txnref || response?.txn_ref || reference;
 
           try {
-            // 5. Verify with backend — pass reference and original naira amount
-            const verified = await verifyDonation(txnRef, confirmedAmount ?? parsedAmount);
+            // 5. Verify with backend
+            const verified = await verifyDonation(txnRef, nairaAmount);
 
             if (verified?.status === 200) {
               toast.success("Donation confirmed! Thank you 🙏");
               navigate(
-                `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${confirmedAmount ?? parsedAmount}&verified=1`
+                `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}&verified=1`
               );
             } else {
               toast.error(verified?.message || "Payment could not be verified.");
               navigate(
-                `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${confirmedAmount ?? parsedAmount}&verified=0`
+                `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}&verified=0`
               );
             }
           } catch (verifyErr) {
-            // Verification network error — still redirect, callback page will retry
+            // Verification network error — redirect anyway, callback page will retry
             navigate(
-              `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${confirmedAmount ?? parsedAmount}`
+              `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}`
             );
           }
         },
 
         mode: "LIVE",
       });
+      // Watch for the Interswitch modal being removed from the DOM
+      const observer = new MutationObserver(() => {
+        const iswModal = document.querySelector('iframe[name*="interswitch"], div[id*="interswitch"], iframe[src*="interswitchng"]');
+        if (!iswModal) {
+          setIsDonating(false);
+          observer.disconnect();
+          console.log(reference)
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      setTimeout(() => {
+        observer.disconnect();
+        setIsDonating(false);
+      }, 600000);
 
-      // Spinner stays on while modal is open; reset on error
+      // Spinner stays on while modal is open; only resets on catch below
     } catch (err) {
       console.error("Donation failed:", err);
       const msg = err.message || "Could not initialize payment. Please try again.";
@@ -181,11 +199,10 @@ export default function DonationWidget({ campaign }) {
               <button
                 key={preset}
                 onClick={() => setAmount(String(preset))}
-                className={`py-2 rounded-lg text-sm font-medium border transition-all ${
-                  amount === String(preset)
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
+                className={`py-2 rounded-lg text-sm font-medium border transition-all ${amount === String(preset)
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
               >
                 ₦{preset.toLocaleString()}
               </button>
@@ -206,15 +223,40 @@ export default function DonationWidget({ campaign }) {
           )}
         </div>
 
-        <div>
-          <Input
-            placeholder="Your full name *"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={anonymous}
-            className="text-sm"
+        {/* Anonymous toggle */}
+        <div
+          className={`flex items-center justify-between ${anonymous ? "bg-slate-50 text-slate-700" : "bg-emerald-600 text-white"
+            } border border-slate-200 rounded-xl px-4 py-3 cursor-pointer`}
+          onClick={() => setAnonymous((prev) => !prev)}
+        >
+          <div>
+            <p className="text-sm font-medium">
+              Donating {anonymous ? "anonymously" : "publicly"}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {anonymous
+                ? "Your name won't be shown publicly"
+                : "Your name will appear as a donor"}
+            </p>
+          </div>
+          <Switch
+            checked={anonymous}
+            onCheckedChange={setAnonymous}
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
+
+        {/* Name — hidden entirely when anonymous */}
+        {!anonymous && (
+          <div>
+            <Input
+              placeholder="Your full name *"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+        )}
 
         <div>
           <Input
@@ -222,9 +264,7 @@ export default function DonationWidget({ campaign }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`text-sm ${
-              email && !emailValid ? "border-red-300" : ""
-            }`}
+            className={`text-sm ${email && !emailValid ? "border-red-300" : ""}`}
           />
           {email && !emailValid && (
             <p className="text-xs text-red-500 mt-1">
@@ -241,11 +281,6 @@ export default function DonationWidget({ campaign }) {
             rows={2}
             className="text-sm resize-none"
           />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label className="text-sm text-slate-600">Donate anonymously</Label>
-          <Switch checked={anonymous} onCheckedChange={setAnonymous} />
         </div>
 
         {donationError && (

@@ -15,7 +15,9 @@ function authHeaders() {
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: { ...options.headers },
+    headers: {
+      ...options.headers,
+    },
   });
 
   let data;
@@ -38,68 +40,123 @@ async function apiFetch(path, options = {}) {
 
 /**
  * GET /campaigns/list.php
- * API envelope: { status, data: { page, campaigns: [...] } }
+ * Returns all campaigns for public listing.
  */
 export async function getCampaigns() {
   const data = await apiFetch("/campaigns/list.php");
+  // API returns { status, data: { page, campaigns: [...] } }
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
   if (Array.isArray(data?.data?.campaigns)) return data.data.campaigns;
   return [];
 }
 
+/**
+ * Update Campaign Status
+ */
 export async function updateCampaignStatus(id, status) {
   const data = await apiFetch(`/admin/campaigns/update-status.php`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
     body: JSON.stringify({ id, status }),
   });
   return data;
 }
 
+/**
+ * GET /campaigns/show.php?id=:id
+ * Returns full details of a single campaign.
+ */
 export async function getCampaignDetails(id) {
   const data = await apiFetch(`/campaigns/show.php?id=${id}`);
   return data?.data ?? data;
 }
 
+/**
+ * GET /campaigns/progress.php?id=:id
+ * Returns funding progress for a campaign.
+ */
 export async function getCampaignProgress(id) {
   const data = await apiFetch(`/campaigns/progress.php?id=${id}`);
   return data?.data ?? data;
 }
 
+/**
+ * POST /campaigns/create.php  (requires auth, multipart/form-data)
+ * @param {FormData} formData
+ */
 export async function createCampaign(formData) {
   const res = await fetch(`${API_URL}/campaigns/create.php`, {
     method: "POST",
-    headers: { ...authHeaders() },
+    headers: {
+      ...authHeaders(),
+      // Do NOT set Content-Type — browser sets it with boundary for FormData
+    },
     credentials: "include",
     body: formData,
   });
+
   let data;
-  try { data = await res.json(); } catch { data = null; }
-  if (!res.ok) throw new Error(data?.message || "Failed to create campaign");
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || "Failed to create campaign");
+  }
+
   return data;
 }
 
 // --- Hospitals ----------------------------------------------------------------
 
+/**
+ * POST /hospitals/request.php  (form-data with file upload)
+ */
 export async function requestHospitalVerification(formData) {
   const res = await fetch(`${API_URL}/hospitals/request.php`, {
     method: "POST",
-    headers: { ...authHeaders() },
+    headers: {
+      ...authHeaders(),
+    },
     credentials: "include",
     body: formData,
   });
+
   let data;
-  try { data = await res.json(); } catch { data = null; }
-  if (!res.ok) throw new Error(data?.message || "Failed to submit hospital verification request");
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok) {
+    throw new Error(
+      data?.message || "Failed to submit hospital verification request",
+    );
+  }
+
   return data;
 }
 
+/**
+ * GET /hospitals/index.php
+ * Returns list of verified hospitals.
+ */
 export async function getHospitals() {
   const data = await apiFetch("/hospitals/index.php");
   return Array.isArray(data) ? data : (data?.data ?? []);
 }
 
+/**
+ * GET /admin/hospital-requests.php
+ * Returns pending hospital verification requests (admin only).
+ */
 export async function getPendingHospitalRequests() {
   const data = await apiFetch("/admin/hospital-requests.php", {
     headers: { ...authHeaders() },
@@ -107,19 +164,56 @@ export async function getPendingHospitalRequests() {
   return Array.isArray(data) ? data : (data?.data ?? []);
 }
 
+/**
+ * POST /admin/hospitals/approve.php
+ */
 export async function approveHospital(payload) {
   const res = await fetch(`${API_URL}/admin/hospitals/approve.php`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
     credentials: "include",
     body: JSON.stringify(payload),
   });
+
   let data;
-  try { data = await res.json(); } catch { data = null; }
-  if (!res.ok) throw new Error(data?.message || "Failed to approve hospital");
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || "Failed to approve hospital");
+  }
+
   return data;
 }
 
+// --- Hospital Verification ----------------------------------------------------
+
+/**
+ * POST /hospitals/verify.php
+ * Verify hospital via TIN or CAC number.
+ */
+export async function verifyHospital(payload) {
+  const data = await apiFetch("/hospitals/verify.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * GET /hospitals/my-campaigns.php
+ * Returns hospital info and its attached campaigns (requires auth).
+ */
 export async function getHospitalCampaigns() {
   const data = await apiFetch("/hospitals/my-campaigns.php", {
     headers: { ...authHeaders() },
@@ -127,10 +221,17 @@ export async function getHospitalCampaigns() {
   return data?.data ?? data;
 }
 
+/**
+ * POST /withdrawals/request.php
+ * Request a withdrawal for a fully funded campaign.
+ */
 export async function requestWithdrawal(payload) {
   const data = await apiFetch("/withdrawals/request.php", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
     body: JSON.stringify(payload),
   });
   return data?.data ?? data;
@@ -141,16 +242,19 @@ export async function requestWithdrawal(payload) {
 /**
  * POST /donations/initiate.php
  *
- * Request:  { campaign_id, name, email, amount }
+ * Request body: { campaign_id, name, email, amount }
  *
- * Response (flat — no nested .data):
+ * Response (flat — no nested .data wrapper):
  * {
  *   status: 200,
  *   message: "Donation initialized",
  *   reference: "DON_123456",
- *   amount: 5000,          <- naira; multiply × 100 when passing to Interswitch
+ *   amount: 5000,          <- naira; DonationWidget multiplies × 100 for Interswitch (kobo)
  *   email: "user@mail.com"
  * }
+ *
+ * @param {{ campaign_id: number, name: string, email: string, amount: number }} payload
+ * @returns {Promise<{ reference: string, amount: number, email: string }>}
  */
 export async function initializeDonation(payload) {
   const res = await fetch(`${API_URL}/donations/initiate.php`, {
@@ -168,7 +272,7 @@ export async function initializeDonation(payload) {
 
   if (!res.ok) {
     throw new Error(
-      body?.message || body?.error || `Payment request failed (${res.status})`
+      body?.message || body?.error || `Payment request failed (${res.status})`,
     );
   }
 
@@ -176,20 +280,22 @@ export async function initializeDonation(payload) {
     throw new Error("No payment reference returned by server.");
   }
 
-  // Return the flat body — caller uses body.reference, body.amount, body.email
+  // Response is flat: return body directly (reference, amount, email at top level)
   return body;
 }
 
 /**
  * GET /donations/verify.php?reference=REF&amount=AMOUNT
  *
- * @param {string} reference  — the DON_xxx / txn_ref value
+ * Called by DonationWidget (inline onComplete) and PaymentCallback (redirect fallback).
+ * Returns the full response body so callers can check body.status === 200.
+ *
+ * @param {string} reference  — DON_xxx / txn_ref value from Interswitch
  * @param {number} [amount]   — original amount in naira (not kobo)
- * @returns full response body so caller can check body.status === 200
  */
 export async function verifyDonation(reference, amount) {
   const params = new URLSearchParams({ reference });
   if (amount != null) params.set("amount", String(amount));
   const data = await apiFetch(`/donations/verify.php?${params.toString()}`);
-  return data; // return full body, not just data.data
+  return data; // return full body — caller checks data.status === 200
 }

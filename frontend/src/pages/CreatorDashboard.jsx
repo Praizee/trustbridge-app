@@ -331,8 +331,8 @@ export default function CreatorDashboard() {
     disbursed: { label: "Disbursed", color: "bg-purple-100 text-purple-700" },
   };
 
-  const totalRaised = campaigns.reduce((s, c) => s + (c.raised_amount || 0), 0);
-  const totalTarget = campaigns.reduce((s, c) => s + (c.target_amount || 0), 0);
+  const totalRaised = campaigns.reduce((s, c) => s + Number(c.raised_amount || 0), 0);
+  const totalTarget = campaigns.reduce((s, c) => s + Number(c.target_amount || 0), 0);
   const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
 
   const stats = [
