@@ -94,17 +94,14 @@ export default function DonationWidget({ campaign }) {
       }
 
       // 3. Trigger inline checkout modal
-   window.webpayCheckout({
+window.webpayCheckout({
   merchant_code: MERCHANT_CODE,
   pay_item_id: PAY_ITEM_ID,
   txn_ref: reference,
   amount: koboAmount.toString(),
   currency: 566,
   cust_id: email.trim(),
-
-  // REQUIRED but CLEAN
-  site_redirect_url: "https://trust.ezirimkingdom.com.ng/api/payment-bridge.php",
-
+  site_redirect_url: "https://trust.ezirimkingdom.com.ng/api/donations/redirect.php",
   onComplete: async function (response) {
     const txnRef = response?.txnref || response?.txn_ref || reference;
 
@@ -112,25 +109,18 @@ export default function DonationWidget({ campaign }) {
       const verified = await verifyDonation(txnRef, nairaAmount);
 
       if (verified?.status === 200) {
-        toast.success("Donation confirmed! 🙏");
-
-        navigate(
-          `/payment/callback?txn_ref=${txnRef}&amount=${nairaAmount}&verified=1`
-        );
+        toast.success("Donation confirmed! Thank you 🙏");
+        navigate(`/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}&verified=1`);
       } else {
-        navigate(
-          `/payment/callback?txn_ref=${txnRef}&amount=${nairaAmount}&verified=0`
-        );
+        navigate(`/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}&verified=0`);
       }
     } catch (err) {
-      navigate(
-        `/payment/callback?txn_ref=${txnRef}&amount=${nairaAmount}`
-      );
+      navigate(`/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}&verified=0`);
     }
   },
-
   mode: "LIVE",
 });
+
       // Watch for the Interswitch modal being removed from the DOM
       const observer = new MutationObserver(() => {
         const iswModal = document.querySelector(

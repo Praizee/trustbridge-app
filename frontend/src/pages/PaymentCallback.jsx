@@ -83,24 +83,22 @@ export default function PaymentCallback() {
   const amountParam = searchParams.get("amount");
   const preVerified = searchParams.get("verified");
 
-  useEffect(() => {
-    if (!reference) {
-      setStatus("error");
-      return;
-    }
+useEffect(() => {
+  if (!reference) {
+    setStatus("error");
+    return;
+  }
 
-    // ✅ ONLY USE RESULT FROM onComplete (NO API CALL HERE)
-    if (preVerified === "1") {
-      setStatus("success");
-      setTxnData({ amount: amountParam });
-    } else if (preVerified === "0") {
-      setStatus("failed");
-      setTxnData({ amount: amountParam });
-    } else {
-      // fallback (rare case)
-      setStatus("pending");
-    }
-  }, [reference, preVerified, amountParam]);
+  if (preVerified === "1") {
+    setStatus("success");
+    setTxnData({ amount: amountParam });
+  } else if (preVerified === "0") {
+    setStatus("failed");
+    setTxnData({ amount: amountParam });
+  } else {
+    setStatus("pending");
+  }
+}, [reference, preVerified, amountParam]);
 
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
