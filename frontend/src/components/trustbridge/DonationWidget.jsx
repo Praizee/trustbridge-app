@@ -86,7 +86,7 @@ export default function DonationWidget({ campaign }) {
 
       const nairaAmount = parseInt(parsedAmount, 10);
       const koboAmount = Math.round(Number(amount)) * 100;
-      console.log(koboAmount);
+      // console.log(koboAmount);
       await loadInterswitchScript();
 
       if (!window.webpayCheckout) {
@@ -141,7 +141,7 @@ export default function DonationWidget({ campaign }) {
         if (!iswModal) {
           setIsDonating(false);
           observer.disconnect();
-          console.log(reference);
+          // console.log(reference);
         }
       });
       observer.observe(document.body, { childList: true, subtree: true });
