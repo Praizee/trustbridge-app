@@ -3,7 +3,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, User, Mail, Lock, AlertCircle, ArrowRight } from "lucide-react";
+import {
+  Heart,
+  User,
+  Mail,
+  Lock,
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -14,6 +23,7 @@ export default function Register() {
     email: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const { register, isLoading, error } = useAuthStore();
   const navigate = useNavigate();
 
@@ -149,13 +159,24 @@ export default function Register() {
                   <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white focus:ring-emerald-500/20 rounded-xl transition-all"
+                    className="pl-11 pr-11 h-12 bg-slate-50 border-slate-200 focus:bg-white focus:ring-emerald-500/20 rounded-xl transition-all"
                     value={formData.password}
                     onChange={handleChange}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
                 {formData.password && (
                   <div className="flex gap-1.5 mt-2.5">
