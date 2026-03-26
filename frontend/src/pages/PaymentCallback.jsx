@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { verifyDonation } from "@/lib/api";
 
-// ─── Status display config ────────────────────────────────────────────────────
+// ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
   loading: {
@@ -28,7 +28,7 @@ const STATUS_CONFIG = {
     badgeLabel: "Verifying…",
     heading: "Verifying your payment",
     subheading:
-      "Please wait while we confirm your transaction with the payment gateway. Do not close this page.",
+      "Please wait while we confirm your transaction. Do not close this page.",
     ringColor: "ring-slate-100",
   },
   success: {
@@ -39,7 +39,7 @@ const STATUS_CONFIG = {
     badgeLabel: "Payment Successful",
     heading: "Thank you for your donation!",
     subheading:
-      "Your payment was confirmed. Funds are held in Interswitch escrow and will be disbursed directly to the hospital.",
+      "Your payment is confirmed. Funds are held in Interswitch escrow and disbursed directly to the hospital.",
     ringColor: "ring-emerald-100",
   },
   failed: {
@@ -50,7 +50,7 @@ const STATUS_CONFIG = {
     badgeLabel: "Payment Failed",
     heading: "Your payment could not be completed",
     subheading:
-      "Something went wrong during checkout. No money has been charged. Please try again or use a different payment method.",
+      "No money has been charged. Please try again or use a different payment method.",
     ringColor: "ring-red-100",
   },
   pending: {
@@ -61,7 +61,7 @@ const STATUS_CONFIG = {
     badgeLabel: "Payment Pending",
     heading: "Your payment is being processed",
     subheading:
-      "We haven't received final confirmation yet. This usually resolves in a few minutes. You can refresh to check again.",
+      "We haven't received final confirmation yet. Refresh to check again in a few moments.",
     ringColor: "ring-amber-100",
   },
   error: {
@@ -72,7 +72,7 @@ const STATUS_CONFIG = {
     badgeLabel: "Verification Error",
     heading: "Could not verify payment",
     subheading:
-      "We were unable to reach our server to confirm your payment. Please contact support with your reference number.",
+      "We were unable to reach our server. Please contact support with your reference number.",
     ringColor: "ring-red-100",
   },
 };
@@ -86,8 +86,11 @@ export default function PaymentCallback() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // Interswitch appends ?txn_ref=... to your callback URL
+  // Params set by DonationWidget after inline onComplete, or by Interswitch redirect
   const reference = searchParams.get("txn_ref");
+  const amountParam = searchParams.get("amount"); // naira, not kobo
+  // "verified=1" means DonationWidget already verified inline — skip re-verify
+  const preVerified = searchParams.get("verified");
 
   useEffect(() => {
     if (!reference) {
@@ -96,20 +99,42 @@ export default function PaymentCallback() {
       return;
     }
 
-    verifyDonation(reference)
-      .then((data) => {
-        setTxnData(data);
+    // Fast path: DonationWidget already called verify and passed the result
+    if (preVerified === "1") {
+      setStatus("success");
+      setTxnData({ amount: amountParam });
+      return;
+    }
+    if (preVerified === "0") {
+      setStatus("failed");
+      setTxnData({ amount: amountParam });
+      return;
+    }
 
-        // Map your backend's status field to our UI states.
-        // Adjust the field name / values to match your API response.
-        const s = (data?.status || data?.payment_status || "").toLowerCase();
+    // Slow path: page loaded directly (e.g. from Interswitch redirect)
+    // Call verify API ourselves: GET /donations/verify.php?reference=REF&amount=AMOUNT
+    verifyDonation(reference, amountParam ? Number(amountParam) : undefined)
+      .then((body) => {
+        setTxnData(body?.data ?? body);
 
-        if (s === "success" || s === "successful" || s === "completed") {
+        // Kingdom's API: { status: 200 } = success
+        if (body?.status === 200) {
           setStatus("success");
-        } else if (s === "pending" || s === "processing") {
-          setStatus("pending");
         } else {
-          setStatus("failed");
+          // Check nested data status string as fallback
+          const s = (
+            body?.data?.status ||
+            body?.payment_status ||
+            ""
+          ).toLowerCase();
+
+          if (s === "success" || s === "successful" || s === "completed") {
+            setStatus("success");
+          } else if (s === "pending" || s === "processing") {
+            setStatus("pending");
+          } else {
+            setStatus("failed");
+          }
         }
       })
       .catch((err) => {
@@ -117,12 +142,11 @@ export default function PaymentCallback() {
         setErrorMsg(err.message || "Verification request failed.");
         setStatus("error");
       });
-  }, [reference]);
+  }, [reference, preVerified, amountParam]);
 
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
 
-  // campaign_id lets us link back to the campaign — your verify API should return it
   const campaignId = txnData?.campaign_id;
 
   const shareUrl = campaignId
@@ -137,8 +161,8 @@ export default function PaymentCallback() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Format amount — adjust divisor if your backend returns kobo (divide by 100)
-  const rawAmount = txnData?.amount;
+  // Amount: prefer what verify returned, fall back to URL param
+  const rawAmount = txnData?.amount ?? amountParam;
   const formattedAmount =
     rawAmount != null && !isNaN(Number(rawAmount))
       ? Number(rawAmount).toLocaleString("en-NG", {
@@ -181,20 +205,13 @@ export default function PaymentCallback() {
             <motion.div
               initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{
-                type: "spring",
-                stiffness: 200,
-                damping: 16,
-                delay: 0.1,
-              }}
+              transition={{ type: "spring", stiffness: 200, damping: 16, delay: 0.1 }}
               className={`w-20 h-20 rounded-full ${config.iconBg} ring-8 ${config.ringColor} flex items-center justify-center mb-5`}
             >
               <Icon className={`w-9 h-9 ${config.iconColor}`} />
             </motion.div>
 
-            <span
-              className={`text-xs font-semibold px-3 py-1.5 rounded-full mb-3 ${config.badge}`}
-            >
+            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full mb-3 ${config.badge}`}>
               {config.badgeLabel}
             </span>
 
@@ -205,16 +222,15 @@ export default function PaymentCallback() {
               {config.subheading}
             </p>
 
-            {/* Surface any error message from the network/backend */}
             {errorMsg && (
-              <p className="mt-3 text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-2 w-full">
+              <p className="mt-3 text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-2 w-full text-left">
                 {errorMsg}
               </p>
             )}
           </div>
 
-          {/* Transaction Details — rendered once verify API responds */}
-          {txnData && (
+          {/* Transaction Details */}
+          {(reference || formattedAmount || txnData) && status !== "loading" && (
             <div className="bg-slate-50 rounded-xl p-4 mb-6 space-y-3">
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <ReceiptText className="w-3.5 h-3.5" /> Transaction Details
@@ -233,7 +249,7 @@ export default function PaymentCallback() {
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Amount</span>
                   <span className="font-bold text-slate-800">
-                    &#8358;{formattedAmount}
+                    ₦{formattedAmount}
                   </span>
                 </div>
               )}
@@ -267,9 +283,7 @@ export default function PaymentCallback() {
 
               <div className="flex justify-between text-sm pt-1 border-t border-slate-200">
                 <span className="text-slate-500">Status</span>
-                <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${config.badge}`}
-                >
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${config.badge}`}>
                   {config.badgeLabel}
                 </span>
               </div>
@@ -279,25 +293,17 @@ export default function PaymentCallback() {
           {/* Actions */}
           <div className="space-y-3">
             {status === "success" && campaignId && (
-              <Button
-                asChild
-                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold"
-              >
+              <Button asChild className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold">
                 <Link to={`/campaigns/${campaignId}`}>
-                  <Heart className="w-4 h-4 mr-2" />
-                  View Campaign
+                  <Heart className="w-4 h-4 mr-2" /> View Campaign
                 </Link>
               </Button>
             )}
 
             {status === "success" && !campaignId && (
-              <Button
-                asChild
-                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold"
-              >
+              <Button asChild className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold">
                 <Link to="/campaigns">
-                  <Heart className="w-4 h-4 mr-2" />
-                  Browse Campaigns
+                  <Heart className="w-4 h-4 mr-2" /> Browse Campaigns
                 </Link>
               </Button>
             )}
@@ -307,19 +313,22 @@ export default function PaymentCallback() {
                 onClick={() => window.location.reload()}
                 className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold"
               >
-                <RefreshCcw className="w-4 h-4 mr-2" />
-                Refresh Status
+                <RefreshCcw className="w-4 h-4 mr-2" /> Refresh Status
               </Button>
             )}
 
             {(status === "failed" || status === "error") && campaignId && (
-              <Button
-                asChild
-                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold"
-              >
+              <Button asChild className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold">
                 <Link to={`/campaigns/${campaignId}`}>
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  Try Again
+                  <RefreshCcw className="w-4 h-4 mr-2" /> Try Again
+                </Link>
+              </Button>
+            )}
+
+            {(status === "failed" || status === "error") && !campaignId && (
+              <Button asChild className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold">
+                <Link to="/campaigns">
+                  <RefreshCcw className="w-4 h-4 mr-2" /> Back to Campaigns
                 </Link>
               </Button>
             )}

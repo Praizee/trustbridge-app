@@ -155,6 +155,51 @@ export async function approveHospital(payload) {
   return data;
 }
 
+// --- Hospital Verification ----------------------------------------------------
+
+/**
+ * POST /hospitals/verify.php
+ * Verify hospital via TIN or CAC number.
+ */
+export async function verifyHospital(payload) {
+  const data = await apiFetch("/hospitals/verify.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * GET /hospitals/my-campaigns.php
+ * Returns hospital info and its attached campaigns (requires auth).
+ */
+export async function getHospitalCampaigns() {
+  const data = await apiFetch("/hospitals/my-campaigns.php", {
+    headers: { ...authHeaders() },
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * POST /withdrawals/request.php
+ * Request a withdrawal for a fully funded campaign.
+ */
+export async function requestWithdrawal(payload) {
+  const data = await apiFetch("/withdrawals/request.php", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return data?.data ?? data;
+}
+
 // --- Donations ----------------------------------------------------------------
 
 /**
@@ -162,27 +207,17 @@ export async function approveHospital(payload) {
  *
  * Request body: { campaign_id, name, email, amount }
  *
- * Success response shape:
+ * Response (flat — no nested .data wrapper):
  * {
  *   status: 200,
- *   message: "Payment initialized",
- *   data: {
- *     reference: "TB_1710323434_4821",
- *     gateway: "interswitch",
- *     checkout_method: "web_redirect",
- *     checkout_url: "https://newwebpay.qa.interswitchng.com/collections/w/pay",
- *     checkout_fields: {
- *       merchant_code, pay_item_id, site_redirect_url,
- *       txn_ref, amount, currency, cust_name, cust_email, pay_item_name
- *     }
- *   }
+ *   message: "Donation initialized",
+ *   reference: "DON_123456",
+ *   amount: 5000,          <- naira; DonationWidget multiplies × 100 for Interswitch (kobo)
+ *   email: "user@mail.com"
  * }
  *
- * The caller (DonationWidget) is responsible for building and
- * auto-submitting the form to checkout_url with checkout_fields.
- *
  * @param {{ campaign_id: number, name: string, email: string, amount: number }} payload
- * @returns {Promise<{ reference, checkout_url, checkout_fields, ... }>}
+ * @returns {Promise<{ reference: string, amount: number, email: string }>}
  */
 export async function initializeDonation(payload) {
   // Initialize donation is usually public, but if we need auth in future,
@@ -242,13 +277,22 @@ export async function verifyHospital(payload) {
     body: JSON.stringify(payload),
   });
   return data?.data ?? data;
+  if (!body?.reference) {
+    throw new Error("No payment reference returned by server.");
+  }
+
+  // Response is flat: return body directly (reference, amount, email at top level)
+  return body;
 }
 
 /**
- * GET /hospitals/my-campaigns.php
- * Returns hospital info and its attached campaigns (requires auth).
+ * GET /donations/verify.php?reference=REF&amount=AMOUNT
  *
- * Response shape: { hospital: { id, name, verified }, campaigns: [...] }
+ * Called by DonationWidget (inline onComplete) and PaymentCallback (redirect fallback).
+ * Returns the full response body so callers can check body.status === 200.
+ *
+ * @param {string} reference  — DON_xxx / txn_ref value from Interswitch
+ * @param {number} [amount]   — original amount in naira (not kobo)
  */
 export async function getHospitalCampaigns() {
   const data = await apiFetch("/hospitals/my-campaigns.php");
@@ -285,5 +329,12 @@ export async function verifyDonation(reference) {
     `/donations/verify.php?reference=${encodeURIComponent(reference)}`,
   );
   return data?.data ?? data;
+}
+
+export async function verifyDonation(reference, amount) {
+  const params = new URLSearchParams({ reference });
+  if (amount != null) params.set("amount", String(amount));
+  const data = await apiFetch(`/donations/verify.php?${params.toString()}`);
+  return data; // return full body — caller checks data.status === 200
 }
 
