@@ -254,10 +254,6 @@ export async function getHospitalCampaigns() {
  * @returns {Promise<{ reference: string, amount: number, email: string }>}
  */
 export async function initializeDonation(payload) {
-  // Initialize donation is usually public, but if we need auth in future,
-  // we would need to manually add it similar to apiFetch or use apiFetch.
-  // Currently kept as raw fetch to match previous implementation's specific error handling needs
-  // or simple public access.
   const res = await fetch(`${API_URL}/donations/initiate.php`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -277,13 +273,12 @@ export async function initializeDonation(payload) {
     );
   }
 
-  const result = body?.data ?? body;
-
-  if (!result?.payment_url) {
-    throw new Error("Payment link was not returned by the server.");
+  if (!body?.reference) {
+    throw new Error("No payment reference returned by server.");
   }
 
-  return result;
+  // Response is flat: return body directly (reference, amount, email at top level)
+  return body;
 }
 
 // --- Hospital Verification ----------------------------------------------------
