@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import PasswordStrength from "@/components/trustbridge/PasswordStrength";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -29,24 +30,22 @@ export default function Register() {
 
   const [formErrors, setFormErrors] = useState({});
 
-  const calculateStrength = (pass) => {
-    let score = 0;
-    if (!pass) return score;
-    if (pass.length > 5) score += 1;
-    if (pass.length > 7) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
-    return score;
-  };
-
   const validate = () => {
     const errors = {};
     if (!formData.name.trim()) errors.name = "Name is required";
     if (!formData.email.trim() || !/^\S+@\S+\.\S+$/.test(formData.email))
       errors.email = "Valid email is required";
-    if (formData.password.length < 6)
-      errors.password = "Password must be at least 6 characters";
+
+    // Stricter password validation
+    if (formData.password.length < 8) {
+      errors.password = "Password must be at least 8 characters";
+    } else if (!/[A-Z]/.test(formData.password)) {
+      errors.password = "Password must contain an uppercase letter";
+    } else if (!/[0-9]/.test(formData.password)) {
+      errors.password = "Password must contain a number";
+    } else if (!/[^A-Za-z0-9]/.test(formData.password)) {
+      errors.password = "Password must contain a special character";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -179,24 +178,7 @@ export default function Register() {
                   </button>
                 </div>
                 {formData.password && (
-                  <div className="flex gap-1.5 mt-2.5">
-                    {[1, 2, 3, 4, 5].map((level) => {
-                      const strength = calculateStrength(formData.password);
-                      const active = strength >= level;
-                      let color = "bg-slate-200";
-                      if (active) {
-                        if (strength <= 2) color = "bg-red-400";
-                        else if (strength === 3) color = "bg-amber-400";
-                        else color = "bg-emerald-500";
-                      }
-                      return (
-                        <div
-                          key={level}
-                          className={`h-1.5 w-full rounded-full transition-colors duration-300 ${color}`}
-                        />
-                      );
-                    })}
-                  </div>
+                  <PasswordStrength password={formData.password} />
                 )}
                 {formErrors.password && (
                   <p className="text-xs text-red-500 mt-1.5 ml-1">

@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { resetPassword } from "@/lib/api";
+import PasswordStrength from "@/components/trustbridge/PasswordStrength";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -34,23 +35,21 @@ export default function ResetPassword() {
     }
   }, [token, navigate]);
 
-  const calculateStrength = (pass) => {
-    let score = 0;
-    if (!pass) return score;
-    if (pass.length > 5) score += 1;
-    if (pass.length > 7) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
-    return score;
-  };
-
   const validate = () => {
     const errors = {};
-    if (password.length < 6)
-      errors.password = "Password must be at least 6 characters";
-    if (password !== confirmPassword)
+    if (password.length < 8) {
+      errors.password = "Password must be at least 8 characters";
+    } else if (!/[A-Z]/.test(password)) {
+      errors.password = "Password must contain an uppercase letter";
+    } else if (!/[0-9]/.test(password)) {
+      errors.password = "Password must contain a number";
+    } else if (!/[^A-Za-z0-9]/.test(password)) {
+      errors.password = "Password must contain a special character";
+    }
+
+    if (password !== confirmPassword) {
       errors.confirmPassword = "Passwords do not match";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -139,27 +138,7 @@ export default function ResetPassword() {
                     )}
                   </button>
                 </div>
-                {password && (
-                  <div className="flex gap-1.5 mt-2.5">
-                    {[1, 2, 3, 4, 5].map((level) => {
-                      const strength = calculateStrength(password);
-                      return (
-                        <div
-                          key={level}
-                          className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-                            level <= strength
-                              ? strength < 3
-                                ? "bg-red-400"
-                                : strength < 4
-                                  ? "bg-amber-400"
-                                  : "bg-emerald-500"
-                              : "bg-slate-100"
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
+                {password && <PasswordStrength password={password} />}
                 {formErrors.password && (
                   <p className="text-xs text-red-500 mt-1.5 ml-1">
                     {formErrors.password}
