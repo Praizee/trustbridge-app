@@ -94,45 +94,43 @@ export default function DonationWidget({ campaign }) {
       }
 
       // 3. Trigger inline checkout modal
-      window.webpayCheckout({
-        merchant_code: MERCHANT_CODE,
-        pay_item_id: PAY_ITEM_ID,
-        txn_ref: reference,
-        amount: koboAmount.toString(),
-        currency: 566,
-        cust_id: email.trim(),
-        site_redirect_url: `${window.location.origin}/payment/callback?txn_ref=${encodeURIComponent(reference)}&amount=${nairaAmount}`,
-        onComplete: async function (response) {
-          // 4. User completed payment — response.txnref is our reference
-          const txnRef = response?.txnref || response?.txn_ref || reference;
+   window.webpayCheckout({
+  merchant_code: MERCHANT_CODE,
+  pay_item_id: PAY_ITEM_ID,
+  txn_ref: reference,
+  amount: koboAmount.toString(),
+  currency: 566,
+  cust_id: email.trim(),
 
-          try {
-            // 5. Verify with backend
-            const verified = await verifyDonation(txnRef, nairaAmount);
+  // REQUIRED but CLEAN
+  site_redirect_url: "https://trust.ezirimkingdom.com.ng/api/payment-bridge.php",
 
-            if (verified?.status === 200) {
-              toast.success("Donation confirmed! Thank you 🙏");
-              navigate(
-                `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}&verified=1`,
-              );
-            } else {
-              toast.error(
-                verified?.message || "Payment could not be verified.",
-              );
-              navigate(
-                `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}&verified=0`,
-              );
-            }
-          } catch (verifyErr) {
-            // Verification network error — redirect anyway, callback page will retry
-            navigate(
-              `/payment/callback?txn_ref=${encodeURIComponent(txnRef)}&amount=${nairaAmount}`,
-            );
-          }
-        },
+  onComplete: async function (response) {
+    const txnRef = response?.txnref || response?.txn_ref || reference;
 
-        mode: "LIVE",
-      });
+    try {
+      const verified = await verifyDonation(txnRef, nairaAmount);
+
+      if (verified?.status === 200) {
+        toast.success("Donation confirmed! 🙏");
+
+        navigate(
+          `/payment/callback?txn_ref=${txnRef}&amount=${nairaAmount}&verified=1`
+        );
+      } else {
+        navigate(
+          `/payment/callback?txn_ref=${txnRef}&amount=${nairaAmount}&verified=0`
+        );
+      }
+    } catch (err) {
+      navigate(
+        `/payment/callback?txn_ref=${txnRef}&amount=${nairaAmount}`
+      );
+    }
+  },
+
+  mode: "LIVE",
+});
       // Watch for the Interswitch modal being removed from the DOM
       const observer = new MutationObserver(() => {
         const iswModal = document.querySelector(
