@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -26,10 +24,8 @@ import {
 import {
   Shield,
   CheckCircle2,
-  XCircle,
   FileText,
   Building2,
-  Eye,
   Banknote,
   AlertTriangle,
   TrendingUp,
@@ -42,7 +38,9 @@ import {
 import { toast } from "sonner";
 import {
   getPendingHospitalRequests,
-  approveHospital,
+  adminVerifyHospital,
+  getPendingWithdrawals,
+  approveWithdrawal,
   getCampaigns,
   getHospitals,
   updateCampaignStatus,
@@ -54,24 +52,27 @@ export default function SuperAdminDashboard() {
   const [campaigns, setCampaigns] = useState([]);
   const [hospitals, setHospitals] = useState([]);
   const [hospitalRequests, setHospitalRequests] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
+  const [approvingWithdrawal, setApprovingWithdrawal] = useState({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState(null);
-  const [reviewCampaign, setReviewCampaign] = useState(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
-  const [approveForm, setApproveForm] = useState({
-    bank_account: "",
-    bank_code: "",
-  });
 
   const fetchAll = () => {
-    Promise.all([getCampaigns(), getHospitals(), getPendingHospitalRequests()])
-      .then(([cData, hData, reqData]) => {
+    Promise.all([
+      getCampaigns(),
+      getHospitals(),
+      getPendingHospitalRequests(),
+      getPendingWithdrawals(),
+    ])
+      .then(([cData, hData, reqData, wData]) => {
         setCampaigns(cData);
         setHospitals(hData);
         setHospitalRequests(reqData);
+        setWithdrawals(wData);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -84,37 +85,9 @@ export default function SuperAdminDashboard() {
     fetchAll();
   }, []);
 
-  const pendingPayouts = campaigns.filter(
-    (c) => c.status === "disbursement_requested",
-  );
   const totalDisbursed = campaigns
     .filter((c) => c.status === "disbursed")
     .reduce((s, c) => s + (c.target_amount || 0), 0);
-  const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
-  //   const totalRaised = campaigns.reduce((s, c) => s + (c.raised_amount || 0), 0);
-
-  const handleApprove = async (c) => {
-    try {
-      await updateCampaignStatus(c.id, "disbursed");
-      toast.success(
-        `✓ Disbursement approved — ₦${(c.target_amount || 0).toLocaleString()} released to ${c.hospital_name}`,
-      );
-      fetchAll();
-    } catch (err) {
-      toast.error("Failed to approve. Please try again.");
-      console.error(err);
-    }
-  };
-
-  const handleReject = async (c) => {
-    try {
-      await updateCampaignStatus(c.id, "funded");
-      toast.error(`Disbursement rejected for "${c.title}"`);
-      fetchAll();
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleDeleteCampaign = async () => {
     if (!campaignToDelete) return;
@@ -132,37 +105,35 @@ export default function SuperAdminDashboard() {
   };
 
   const handleApproveHospital = async () => {
-    if (
-      !selectedRequest ||
-      !approveForm.bank_account ||
-      !approveForm.bank_code
-    ) {
-      toast.error("Please fill in all required fields.");
-      return;
-    }
-
+    if (!selectedRequest) return;
     setIsApproving(true);
     try {
-      await approveHospital({
-        request_id: selectedRequest.id,
-        hospital_name: selectedRequest.hospital_name,
-        hospital_address: selectedRequest.hospital_address,
-        bank_account: approveForm.bank_account,
-        bank_code: approveForm.bank_code,
-      });
-
+      await adminVerifyHospital(selectedRequest.hospital_id ?? selectedRequest.id);
       toast.success(
         `✓ Hospital "${selectedRequest.hospital_name}" approved and verified!`,
       );
       setApproveDialogOpen(false);
       setSelectedRequest(null);
-      setApproveForm({ bank_account: "", bank_code: "" });
       fetchAll();
     } catch (err) {
       toast.error(err.message || "Failed to approve hospital.");
-      console.error(err);
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleApproveWithdrawal = async (w) => {
+    setApprovingWithdrawal((prev) => ({ ...prev, [w.id]: true }));
+    try {
+      await approveWithdrawal(w.id);
+      toast.success(
+        `✓ Withdrawal of ₦${(w.amount || 0).toLocaleString()} approved.`,
+      );
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to approve withdrawal.");
+    } finally {
+      setApprovingWithdrawal((prev) => ({ ...prev, [w.id]: false }));
     }
   };
 
@@ -177,11 +148,11 @@ export default function SuperAdminDashboard() {
     },
     {
       label: "Pending Payouts",
-      value: pendingPayouts.length,
+      value: withdrawals.length,
       icon: AlertTriangle,
       color: "text-amber-600",
       bg: "bg-amber-50",
-      urgent: true,
+      urgent: withdrawals.length > 0,
     },
     {
       label: "Total Raised",
@@ -261,7 +232,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Alert Banner */}
-        {pendingPayouts.length > 0 && (
+        {withdrawals.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -269,9 +240,8 @@ export default function SuperAdminDashboard() {
           >
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
             <p className="text-sm text-amber-800 font-medium">
-              {pendingPayouts.length} disbursement request
-              {pendingPayouts.length > 1 ? "s" : ""} pending your review.
-              Approve only after verifying the invoice.
+              {withdrawals.length} withdrawal request
+              {withdrawals.length > 1 ? "s" : ""} pending your approval.
             </p>
           </motion.div>
         )}
@@ -297,9 +267,9 @@ export default function SuperAdminDashboard() {
             >
               <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
               Pending Payouts
-              {pendingPayouts.length > 0 && (
+              {withdrawals.length > 0 && (
                 <span className="ml-2 bg-amber-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {pendingPayouts.length}
+                  {withdrawals.length}
                 </span>
               )}
             </TabsTrigger>
@@ -439,68 +409,33 @@ export default function SuperAdminDashboard() {
                                 <DialogContent className="max-w-md">
                                   <DialogHeader>
                                     <DialogTitle>Approve Hospital</DialogTitle>
+                                    <DialogDescription>
+                                      This will verify the hospital and make it
+                                      selectable by campaign creators.
+                                    </DialogDescription>
                                   </DialogHeader>
                                   {selectedRequest && (
-                                    <div className="space-y-4 mt-4">
-                                      <div className="bg-indigo-50 rounded-lg p-3 space-y-1 mb-4">
+                                    <div className="space-y-4 mt-2">
+                                      <div className="bg-indigo-50 rounded-lg p-3 space-y-1">
                                         <p className="text-sm text-slate-700">
-                                          <span className="font-medium">
-                                            Hospital:
-                                          </span>{" "}
+                                          <span className="font-medium">Hospital:</span>{" "}
                                           {selectedRequest.hospital_name}
                                         </p>
                                         <p className="text-sm text-slate-700">
-                                          <span className="font-medium">
-                                            Address:
-                                          </span>{" "}
+                                          <span className="font-medium">Address:</span>{" "}
                                           {selectedRequest.hospital_address}
                                         </p>
-                                        <p className="text-sm text-slate-700">
-                                          <span className="font-medium">
-                                            Email:
-                                          </span>{" "}
-                                          {selectedRequest.contact_email}
-                                        </p>
+                                        {selectedRequest.contact_email && (
+                                          <p className="text-sm text-slate-700">
+                                            <span className="font-medium">Email:</span>{" "}
+                                            {selectedRequest.contact_email}
+                                          </p>
+                                        )}
                                       </div>
-
-                                      <div>
-                                        <Label className="text-sm font-medium text-slate-700 mb-1.5 block">
-                                          Bank Account Number *
-                                        </Label>
-                                        <Input
-                                          placeholder="0123456789"
-                                          value={approveForm.bank_account}
-                                          onChange={(e) =>
-                                            setApproveForm((p) => ({
-                                              ...p,
-                                              bank_account: e.target.value,
-                                            }))
-                                          }
-                                        />
-                                      </div>
-
-                                      <div>
-                                        <Label className="text-sm font-medium text-slate-700 mb-1.5 block">
-                                          Bank Code *
-                                        </Label>
-                                        <Input
-                                          placeholder="e.g., 044"
-                                          value={approveForm.bank_code}
-                                          onChange={(e) =>
-                                            setApproveForm((p) => ({
-                                              ...p,
-                                              bank_code: e.target.value,
-                                            }))
-                                          }
-                                        />
-                                      </div>
-
-                                      <div className="flex gap-3 mt-6">
+                                      <div className="flex gap-3 mt-4">
                                         <Button
                                           variant="outline"
-                                          onClick={() =>
-                                            setApproveDialogOpen(false)
-                                          }
+                                          onClick={() => setApproveDialogOpen(false)}
                                           disabled={isApproving}
                                         >
                                           Cancel
@@ -510,9 +445,7 @@ export default function SuperAdminDashboard() {
                                           onClick={handleApproveHospital}
                                           disabled={isApproving}
                                         >
-                                          {isApproving
-                                            ? "Approving..."
-                                            : "Approve & Verify"}
+                                          {isApproving ? "Approving…" : "Approve & Verify"}
                                         </Button>
                                       </div>
                                     </div>
@@ -548,15 +481,15 @@ export default function SuperAdminDashboard() {
                           Amount
                         </TableHead>
                         <TableHead className="text-xs font-semibold text-slate-500">
-                          Invoice
+                          Requested
                         </TableHead>
                         <TableHead className="text-xs font-semibold text-slate-500">
-                          Actions
+                          Action
                         </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pendingPayouts.length === 0 ? (
+                      {withdrawals.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-16">
                             <div className="flex flex-col items-center gap-2 text-slate-400">
@@ -565,154 +498,47 @@ export default function SuperAdminDashboard() {
                                 All clear!
                               </p>
                               <p className="text-xs">
-                                No pending payout requests at the moment.
+                                No pending withdrawal requests.
                               </p>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        pendingPayouts.map((c) => (
-                          <TableRow key={c.id} className="hover:bg-slate-50/50">
+                        withdrawals.map((w) => (
+                          <TableRow key={w.id} className="hover:bg-slate-50/50">
                             <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                                  <img
-                                    src={
-                                      c.image_url ||
-                                      "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=80"
-                                    }
-                                    alt={c.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-slate-800 text-sm line-clamp-1 max-w-[180px]">
-                                    {c.title}
-                                  </p>
-                                  <p className="text-xs text-slate-400">
-                                    {c.patient_name}
-                                  </p>
-                                </div>
-                              </div>
+                              <p className="font-medium text-slate-800 text-sm line-clamp-1 max-w-[200px]">
+                                {w.campaign_title || w.title || `Campaign #${w.campaign_id}`}
+                              </p>
+                              {w.patient_name && (
+                                <p className="text-xs text-slate-400">{w.patient_name}</p>
+                              )}
                             </TableCell>
                             <TableCell className="text-sm text-slate-700">
-                              {c.hospital_name}
+                              {w.hospital_name || "—"}
                             </TableCell>
                             <TableCell>
                               <span className="font-bold text-sm text-slate-800">
-                                ₦{(c.target_amount || 0).toLocaleString()}
+                                ₦{(w.amount || 0).toLocaleString()}
                               </span>
                             </TableCell>
                             <TableCell>
-                              {c.invoice_url ? (
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-blue-600 text-xs h-8 gap-1.5 px-2"
-                                      onClick={() => setReviewCampaign(c)}
-                                    >
-                                      <Eye className="w-3.5 h-3.5" /> Review
-                                      Invoice
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-xl">
-                                    <DialogHeader>
-                                      <DialogTitle className="text-base">
-                                        Invoice Review
-                                      </DialogTitle>
-                                    </DialogHeader>
-                                    {reviewCampaign && (
-                                      <div className="mt-2">
-                                        <div className="bg-slate-50 rounded-xl p-4 text-sm space-y-1.5 mb-4">
-                                          <p>
-                                            <span className="font-medium text-slate-700">
-                                              Campaign:
-                                            </span>{" "}
-                                            <span className="text-slate-600">
-                                              {reviewCampaign.title}
-                                            </span>
-                                          </p>
-                                          <p>
-                                            <span className="font-medium text-slate-700">
-                                              Patient:
-                                            </span>{" "}
-                                            <span className="text-slate-600">
-                                              {reviewCampaign.patient_name}
-                                            </span>
-                                          </p>
-                                          <p>
-                                            <span className="font-medium text-slate-700">
-                                              Hospital:
-                                            </span>{" "}
-                                            <span className="text-slate-600">
-                                              {reviewCampaign.hospital_name}
-                                            </span>
-                                          </p>
-                                          <p>
-                                            <span className="font-medium text-slate-700">
-                                              Amount:
-                                            </span>{" "}
-                                            <span className="font-bold text-emerald-700">
-                                              ₦
-                                              {(
-                                                reviewCampaign.target_amount ||
-                                                0
-                                              ).toLocaleString()}
-                                            </span>
-                                          </p>
-                                        </div>
-                                        <div className="border border-slate-200 rounded-xl p-4 min-h-[160px] flex items-center justify-center bg-slate-50">
-                                          {reviewCampaign.invoice_url?.endsWith(
-                                            ".pdf",
-                                          ) ? (
-                                            <a
-                                              href={reviewCampaign.invoice_url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-blue-600 hover:underline flex items-center gap-2 text-sm"
-                                            >
-                                              <FileText className="w-5 h-5" />{" "}
-                                              Open PDF Invoice{" "}
-                                              <ExternalLink className="w-3.5 h-3.5" />
-                                            </a>
-                                          ) : (
-                                            <img
-                                              src={reviewCampaign.invoice_url}
-                                              alt="Invoice"
-                                              className="max-h-[320px] rounded-lg"
-                                            />
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </DialogContent>
-                                </Dialog>
-                              ) : (
-                                <span className="text-xs text-slate-400 italic">
-                                  No invoice attached
-                                </span>
-                              )}
+                              <span className="text-xs text-slate-500">
+                                {w.created_at || w.requested_at
+                                  ? new Date(w.created_at || w.requested_at).toLocaleDateString()
+                                  : "—"}
+                              </span>
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8 gap-1"
-                                  onClick={() => handleApprove(c)}
-                                >
-                                  <CheckCircle2 className="w-3 h-3" /> Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-600 border-red-200 hover:bg-red-50 text-xs h-8 gap-1"
-                                  onClick={() => handleReject(c)}
-                                >
-                                  <XCircle className="w-3 h-3" /> Reject
-                                </Button>
-                              </div>
+                              <Button
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8 gap-1"
+                                disabled={!!approvingWithdrawal[w.id]}
+                                onClick={() => handleApproveWithdrawal(w)}
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                {approvingWithdrawal[w.id] ? "Approving…" : "Approve"}
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))

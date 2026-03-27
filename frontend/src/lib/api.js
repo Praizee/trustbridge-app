@@ -222,6 +222,45 @@ export async function getPendingHospitalRequests() {
 }
 
 /**
+ * GET /admin/withdrawals/pending.php
+ * Returns pending withdrawal requests (super-admin only).
+ */
+export async function getPendingWithdrawals() {
+  const data = await apiFetch("/admin/withdrawals/pending.php");
+  return Array.isArray(data) ? data : (data?.data ?? []);
+}
+
+/**
+ * POST /admin/withdrawals/approve.php
+ * Approves a pending withdrawal request.
+ *
+ * @param {number} withdrawal_id
+ */
+export async function approveWithdrawal(withdrawal_id) {
+  const data = await apiFetch("/admin/withdrawals/approve.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ withdrawal_id }),
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * POST /admin/hospitals/verify.php
+ * Verifies (approves) a hospital by ID.
+ *
+ * @param {number} hospital_id
+ */
+export async function adminVerifyHospital(hospital_id) {
+  const data = await apiFetch("/admin/hospitals/verify.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hospital_id }),
+  });
+  return data?.data ?? data;
+}
+
+/**
  * POST /admin/hospitals/approve.php
  */
 export async function approveHospital(payload) {
