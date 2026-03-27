@@ -130,24 +130,60 @@ Authorization: Bearer <token>
 ### 🔹 Auth
 - POST /auth/login.php
 - POST /auth/register.php
+- POST /auth/forgot-password.php
+- POST /auth/reset-password.php
+- GET /auth/me.php
 
 ### 🔹 Campaigns
 - GET /campaigns/list.php
 - GET /campaigns/show.php?id=ID
 - POST /campaigns/create.php
+- POST /campaigns/delete.php
+- GET /campaigns/donations.php
+- GET /campaigns/latest-funded.php
+- GET /campaigns/my-campaign-details.php
+- GET /campaigns/my-campaigns.php
+- GET /campaigns/progress.php
+- GET /campaigns/show.php
 
 ### 🔹 Donations
 - POST /donations/initiate.php
 - GET /donations/verify.php
+- POST /donations/redirect.php
+- GET /donations/get_campaign_donations.php
+
 
 ### 🔹 Hospitals
 - POST /hospitals/request.php
 - GET /hospitals/index.php
 - GET /hospitals/stats.php
+- GET /hospitals/campaign-progress.php
+- GET /hospitals/me.php
+- GET /hospitals/my-campaigns.php
+
+### 🔹 Webhooks
+- POST /webhooks/interswitch.php
+
+### 🔹 Withdrawals
+- POST /withdrawals/request.php
 
 ### 🔹 Admin
 - GET /admin/stats.php
+- GET /admin/dashboard.php
 - POST /admin/hospitals/approve.php
+- POST /admin/hospitals/disable.php
+- POST /admin/hospitals/verify.php
+- GET /admin/hospitals/index.php
+- GET /admin/hospitals/show.php
+- GET /admin/campaigns/delete.php
+- POST /admin/users/activate.php
+- POST /admin/users/delete.php
+- GET /admin/users/index.php
+- GET /admin/users/show.php
+- POST /admin/users/suspend.php
+- POST /admin/withdrawals/approve.php
+- GET /admin/withdrawals/pending.php
+- POST /admin/payment-bridge.php
 
 ---
 
