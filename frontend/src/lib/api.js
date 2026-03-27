@@ -241,9 +241,7 @@ export async function approveHospital(payload) {
  * Returns hospital info and its attached campaigns (requires auth).
  */
 export async function getHospitalCampaigns() {
-  const data = await apiFetch("/hospitals/my-campaigns.php", {
-    headers: { ...authHeaders() },
-  });
+  const data = await apiFetch("/hospitals/my-campaigns.php");
   return data?.data ?? data;
 }
 
