@@ -142,6 +142,15 @@ export async function getCampaignProgress(id) {
   return data?.data ?? data;
 }
 
+/**
+ * GET /campaigns/latest-funded.php
+ * Returns the latest funded campaign.
+ */
+export async function getLatestFundedCampaign() {
+  const data = await apiFetch(`/campaigns/latest-funded.php`);
+  return data?.data ?? data;
+}
+
 // --- Auth (Forgot/Reset Password) ---------------------------------------------
 export async function forgotPassword(email) {
   const data = await apiFetch(`/auth/forgot-password.php`, {
@@ -386,7 +395,9 @@ export async function verifyDonation(reference, amount) {
  * @param {number|string} campaignId
  */
 export async function getCampaignDonations(campaignId) {
-  const data = await apiFetch(`/donations/get_campaign_donations.php?campaign_id=${campaignId}`);
+  const data = await apiFetch(
+    `/donations/get_campaign_donations.php?campaign_id=${campaignId}`,
+  );
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
   if (Array.isArray(data?.donations)) return data.donations;

@@ -1,12 +1,33 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ShieldCheck, Play } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useEffect, useState } from "react";
+import { getLatestFundedCampaign } from "@/lib/api";
+import { Skeleton } from "../ui/skeleton";
 
 export default function HeroSection() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
+  const [latestCampaign, setLatestCampaign] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLatestCampaign = async () => {
+      try {
+        setLoading(true);
+        const campaign = await getLatestFundedCampaign();
+        setLatestCampaign(campaign);
+      } catch (error) {
+        console.error("Failed to fetch latest funded campaign:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLatestCampaign();
+  }, []);
 
   const handleStartCampaign = () => {
     navigate(isAuthenticated ? "/create" : "/login");
@@ -109,22 +130,40 @@ export default function HeroSection() {
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
                 <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-slate-400 font-medium">
-                        Latest campaign funded
-                      </p>
-                      <p className="text-sm font-semibold text-slate-800 mt-0.5">
-                        Amina's Heart Surgery
-                      </p>
+                  {loading ? (
+                    <LatestCampaignSkeleton />
+                  ) : latestCampaign ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-slate-400 font-medium">
+                          Latest campaign funded
+                        </p>
+                        <p className="text-sm font-semibold text-slate-800 mt-0.5 truncate">
+                          {latestCampaign.title}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-lg font-bold text-emerald-600">
+                          {`₦${Number(
+                            latestCampaign.raised_amount,
+                          ).toLocaleString()}`}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {`${Math.round(
+                            (latestCampaign.raised_amount /
+                              latestCampaign.target_amount) *
+                              100,
+                          )}% funded of ₦${Number(
+                            latestCampaign.target_amount,
+                          ).toLocaleString()}`}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-emerald-600">
-                        ₦2.5M
-                      </p>
-                      <p className="text-xs text-slate-400">100% funded</p>
+                  ) : (
+                    <div className="text-center text-sm text-slate-500 py-4">
+                      No campaign data available.
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -148,6 +187,21 @@ export default function HeroSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+function LatestCampaignSkeleton() {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <Skeleton className="h-4 w-24 mb-1.5" />
+        <Skeleton className="h-5 w-32" />
+      </div>
+      <div className="text-right">
+        <Skeleton className="h-7 w-20 mb-1" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+    </div>
   );
 }
 
