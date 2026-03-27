@@ -10,12 +10,12 @@ TrustBridge is a secure, B2B2C medical crowdfunding platform designed to complet
 
 ## 👥 Team Contributions (The Squad)
 
-| Team Member               | Role               | Key Contributions |
-| :------------------------ | :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Team Member               | Role               | Key Contributions                                                                                                                        |
+| :------------------------ | :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
 | **Stephen Adeniji**       | Frontend Lead      | Architected Vite/React app, integrated Zustand state, routing, layouts, auth, and built dashboards (creator, hospital, and super admin). |
-| **Israel Oluniyi**        | Frontend Developer | Developed UI components, landing page, explore campaigns, ensured responsiveness, and wired up payment flows. |
-| **Kingdom Ezirim**        | Backend Lead       | Built REST APIs with PHP, JWT auth, hospital verification system, and integrated Interswitch payment & payout systems. |
-| **Julia-Frances Muoneke** | Product Manager    | Defined strategy, user flows, managed sprint, and prepared documentation. |
+| **Israel Oluniyi**        | Frontend Developer | Developed UI components, landing page, explore campaigns, ensured responsiveness, and wired up payment flows.                            |
+| **Kingdom Ezirim**        | Backend Lead       | Built REST APIs with PHP, JWT auth, hospital verification system, and integrated Interswitch payment & payout systems.                   |
+| **Julia-Frances Muoneke** | Product Manager    | Defined strategy, user flows, managed sprint, and prepared documentation.                                                                |
 
 ---
 
@@ -27,10 +27,10 @@ Medical crowdfunding suffers from a massive trust deficit. Donors hesitate due t
 
 ## 💡 The Solution (Maker-Checker Flow)
 
-1. **Verified Network:** Campaigns must be linked to verified hospitals  
-2. **Secure Inflow:** Donations via **Interswitch Web Checkout**  
-3. **Verification Gate:** Hospitals submit documents before withdrawal  
-4. **Direct Settlement:** Funds are sent directly to hospital accounts  
+1. **Verified Network:** Campaigns must be linked to verified hospitals
+2. **Secure Inflow:** Donations via **Interswitch Web Checkout**
+3. **Verification Gate:** Hospitals submit documents before withdrawal
+4. **Direct Settlement:** Funds are sent directly to hospital accounts
 
 ---
 
@@ -47,242 +47,47 @@ TrustBridge transforms Interswitch into a **Trust Engine**:
 ## 🖥️ Tech Stack
 
 ### Frontend
+
 - React (Vite)
 - Tailwind CSS
 - Zustand
 - Framer Motion
 
 ### Backend
+
 - PHP (Structured REST API)
 - MySQL
 - JWT Authentication
 - PHPMailer
 
 ### Payments
+
 - Interswitch API
 
 ---
 
-# 🚀 Backend Architecture & Documentation
+## � Documentation
 
-## 🧠 Overview
+For detailed information on the frontend and backend, please refer to their respective README files:
 
-The backend powers:
-- Campaign management
-- Secure donation flow
-- Hospital verification (TIN/CAC)
-- Admin dashboards & analytics
+- [Frontend README](./frontend/README.md)
+- [Backend README](./Backend/README.md)
 
 ---
 
-## ⚙️ Architecture Structure
-
-/api
-  /auth
-  /campaigns
-  /donations
-  /hospitals
-  /admin
-/config
-/models
-/middleware
-/utils
-
----
-
-## 🔐 Authentication
-
-- JWT-based authentication
-- Protected routes require:
-
-Authorization: Bearer <token>
-
----
-
-## 💳 Payment Flow (Interswitch)
-
-1. Donation initiated  
-2. Transaction reference generated  
-3. Payment completed via inline checkout  
-4. Callback triggers verification  
-5. Backend confirms transaction  
-6. Donation saved as successful  
-7. Campaign amount updated  
-
----
-
-## 🏥 Hospital Verification
-
-- TIN & CAC validation via Interswitch MARKETPLACE APIs
-- Only verified hospitals can receive funds
-
----
-
-## 📧 Email System
-
-- Powered by PHPMailer
-- Handles notifications & alerts
-
----
-
-## 📊 Core API Endpoints
-
-### 🔹 Auth
-- POST /auth/login.php
-- POST /auth/register.php
-- POST /auth/forgot-password.php
-- POST /auth/reset-password.php
-- GET /auth/me.php
-
-### 🔹 Campaigns
-- GET /campaigns/list.php
-- GET /campaigns/show.php?id=ID
-- POST /campaigns/create.php
-- POST /campaigns/delete.php
-- GET /campaigns/donations.php
-- GET /campaigns/latest-funded.php
-- GET /campaigns/my-campaign-details.php
-- GET /campaigns/my-campaigns.php
-- GET /campaigns/progress.php
-- GET /campaigns/show.php
-
-### 🔹 Donations
-- POST /donations/initiate.php
-- GET /donations/verify.php
-- POST /donations/redirect.php
-- GET /donations/get_campaign_donations.php
-
-
-### 🔹 Hospitals
-- POST /hospitals/request.php
-- GET /hospitals/index.php
-- GET /hospitals/stats.php
-- GET /hospitals/campaign-progress.php
-- GET /hospitals/me.php
-- GET /hospitals/my-campaigns.php
-
-### 🔹 Webhooks
-- POST /webhooks/interswitch.php
-
-### 🔹 Withdrawals
-- POST /withdrawals/request.php
-
-### 🔹 Admin
-- GET /admin/stats.php
-- GET /admin/dashboard.php
-- POST /admin/hospitals/approve.php
-- POST /admin/hospitals/disable.php
-- POST /admin/hospitals/verify.php
-- GET /admin/hospitals/index.php
-- GET /admin/hospitals/show.php
-- GET /admin/campaigns/delete.php
-- POST /admin/users/activate.php
-- POST /admin/users/delete.php
-- GET /admin/users/index.php
-- GET /admin/users/show.php
-- POST /admin/users/suspend.php
-- POST /admin/withdrawals/approve.php
-- GET /admin/withdrawals/pending.php
-- POST /admin/payment-bridge.php
-
----
-
-## 🗄️ Database Tables
-
-- users  
-- hospitals  
-- campaigns  
-- campaign_images  
-- donations  
-- withdrawals  
-
----
-
-## 🌐 Deployment
-
-Backend API:
-https://trust.ezirimkingdom.com.ng/api
-
----
-
-## 🧪 Testing
-
-All endpoints tested using Postman.
-
----
-
-## 🔐 Security Notice
-
-To ensure security & compliance, sensitive files (e.g., database configuration, API keys, and payment credentials) are not included in this repository.
-
-The following files have been excluded:
-
-- config/app.php
-- config/database.php
-- config/payment.php
-
-Please use the provided .example files and replace them with your own environment-specific values.
-
----
-
-## ⚠️ Integration Note (Interswitch Payout Environment & API MARKETPLACE)
-
-Due to limitations in accessing a fully provisioned live Interswitch payout account wallet, full payout testing could not be completed, Also not having a live marketplace account couldn't allow us create wallets, fund it and as well make calls for CAC and TIN enpoints, to verify the hospitals.
-
-However, API responses confirm correct integration and readiness once wallet provisioning is complete.
-
-Sample response:
-{
-  "status": 400,
-  "message": "Hospital verification failed",
-  "data": {
-    "status_code": 409,
-    "response": {
-      "message": "Unexpected error: User wallet not found",
-      "responseCode": "ERROR"
-    }
-  }
-}
-
----
-
-## 🔑 Test Credentials
+## �🔑 Test Credentials
 
 Campaign Creator  
 Email: ezirimchukwuebuka24@gmail.com  
-Password: @Kingdom123  
+Password: @Kingdom123
 
 Hospital Admin  
 Email: upthph@gmail.com  
-Password: #Hospital123  
+Password: #Hospital123
 
 Admin  
 Email: king@gmail.com  
-Password: 12345678  
-
----
-
-## 🧩 Key Design Decisions
-
-- Only verified transactions are stored  
-- No wallet system → direct hospital settlement  
-- Middleware-based auth for scalability  
-- Modular backend for easy extension  
-
----
-
-## 🔥 Highlights
-
-- Fraud-proof donation system  
-- Real-time payment verification  
-- Secure escrow-based architecture  
-- Clean API for frontend integration  
-
----
-
-## 👨🏽‍💻 Backend Developer
-
-**Ezirim Kingdom Chukwuebuka**
+Password: 12345678
 
 ---
 
@@ -293,3 +98,4 @@ TrustBridge ensures every donation is traceable, verified, and impactful.
 ---
 
 _Built with ❤️ for the Enyata <> Interswitch Hackathon._
+
