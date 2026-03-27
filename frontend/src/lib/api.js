@@ -116,6 +116,15 @@ export async function deleteCampaignAdmin(campaign_id) {
 }
 
 /**
+ * GET /campaigns/my-campaign-details.php?id=:id
+ * Returns details for a creator's own campaign
+ */
+export async function getMyCampaignDetails(id) {
+  const data = await apiFetch(`/campaigns/my-campaign-details.php?id=${id}`);
+  return data?.data ?? data;
+}
+
+/**
  * GET /campaigns/show.php?id=:id
  * Returns full details of a single campaign.
  */

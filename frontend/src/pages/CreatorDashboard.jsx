@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import ProgressBar from "@/components/trustbridge/ProgressBar";
-import { getMyCampaigns, deleteCampaignCreator } from "@/lib/api";
+import { getMyCampaigns, deleteCampaignCreator, BASE_URL } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -247,12 +247,20 @@ export default function CreatorDashboard() {
                     <CardContent className="p-5">
                       <div className="flex gap-4">
                         {/* Thumbnail */}
-                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                        <div className="size-28 rounded-xl overflow-hidden bg-slate-100 shrink-0">
                           <img
                             src={
-                              c.thumbnail ||
-                              c.cover_image ||
-                              "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=160"
+                              c.thumbnail_image || c.thumbnail || c.cover_image
+                                ? (
+                                    c.thumbnail_image ||
+                                    c.thumbnail ||
+                                    c.cover_image
+                                  ).startsWith("http")
+                                  ? c.thumbnail_image ||
+                                    c.thumbnail ||
+                                    c.cover_image
+                                  : `${BASE_URL}/${c.thumbnail_image || c.thumbnail || c.cover_image}`
+                                : "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=160"
                             }
                             alt={c.title}
                             className="w-full h-full object-cover"
@@ -293,7 +301,7 @@ export default function CreatorDashboard() {
                                 {pct}%
                               </span>
                               <Link
-                                to={`/campaigns/${c.id}`}
+                                to={`/creator/campaigns/${c.id}`}
                                 className="text-slate-400 hover:text-slate-600 transition-colors"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
