@@ -225,9 +225,9 @@ Please use the provided .example files and replace them with your own environmen
 
 ---
 
-## ⚠️ Integration Note (Interswitch Payout Environment)
+## ⚠️ Integration Note (Interswitch Payout Environment & API MARKETPLACE)
 
-Due to limitations in accessing a fully provisioned live Interswitch payout account, full payout testing could not be completed.
+Due to limitations in accessing a fully provisioned live Interswitch payout account wallet, full payout testing could not be completed, Also not having a live marketplace account couldn't allow us create wallets, fund it and as well make calls for CAC and TIN enpoints, to verify the hospitals.
 
 However, API responses confirm correct integration and readiness once wallet provisioning is complete.
 
