@@ -440,14 +440,21 @@ const handleRequestWithdrawal = async (campaign) => {
                     </div>
                     <div>
                       <Label className="text-slate-700 text-sm">
-                        {verifyForm.verification_method} Number
+                        {verifyForm.verification_method === "TIN"
+                          ? "TIN Number"
+                          : "Registered Company Name"}
                       </Label>
+                      <p className="text-xs text-slate-400 mt-0.5 mb-1">
+                        {verifyForm.verification_method === "TIN"
+                          ? "Enter your hospital's Tax Identification Number"
+                          : "Enter the company name exactly as registered with CAC"}
+                      </p>
                       <Input
                         className="mt-1"
                         placeholder={
                           verifyForm.verification_method === "TIN"
-                            ? "08120451-1001"
-                            : "RC123456"
+                            ? "e.g. 08120451-1001"
+                            : "e.g. University of Port Harcourt Teaching Hospital"
                         }
                         value={verifyForm.verification_value}
                         onChange={(e) =>

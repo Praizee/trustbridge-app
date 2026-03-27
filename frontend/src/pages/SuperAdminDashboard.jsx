@@ -874,7 +874,7 @@ export default function SuperAdminDashboard() {
                                   <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 shrink-0">
                                     <img
                                       src={
-                                        c.image_url ||
+                                        c.cover_image ||
                                         "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=60"
                                       }
                                       alt={c.title}

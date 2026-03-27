@@ -245,11 +245,6 @@ export async function getHospitalCampaigns() {
   return data?.data ?? data;
 }
 
-// export async function getHospitalCampaigns() {
-//   const data = await apiFetch("/hospitals/my-campaigns.php");
-//   return data?.data ?? data;
-// }
-
 // --- Donations ----------------------------------------------------------------
 
 /**
@@ -323,12 +318,6 @@ export async function verifyHospital(payload) {
     body: JSON.stringify(payload),
   });
   return data?.data ?? data;
-  if (!body?.reference) {
-    throw new Error("No payment reference returned by server.");
-  }
-
-  // Response is flat: return body directly (reference, amount, email at top level)
-  return body;
 }
 
 /**
@@ -358,18 +347,6 @@ export async function requestWithdrawal(payload) {
 
   return data; // ✅ FIXED
 }
-
-// export async function requestWithdrawal(payload) {
-//   const data = await apiFetch("/withdrawals/request.php", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//       ...authHeaders(),
-//     },
-//     body: JSON.stringify(payload),
-//   });
-//   return data?.data ?? data;
-// }
 
 /**
  * GET /donations/verify.php?reference=:ref
