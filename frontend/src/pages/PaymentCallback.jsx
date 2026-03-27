@@ -1,190 +1,137 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Link, useSearchParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  CheckCircle2,
-  XCircle,
-  Clock,
-  ShieldCheck,
-  Building2,
-  Heart,
-  Share2,
-  ArrowLeft,
-  ReceiptText,
-  RefreshCcw,
-  Loader2,
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
-// ─── Status config ────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG = {
-  loading: {
-    icon: Loader2,
-    iconColor: "text-slate-400 animate-spin",
-    iconBg: "bg-slate-50",
-    badge: "bg-slate-100 text-slate-600",
-    badgeLabel: "Verifying…",
-    heading: "Processing your payment",
-    subheading: "Please wait while we confirm your transaction.",
-    ringColor: "ring-slate-100",
-  },
-  success: {
-    icon: CheckCircle2,
-    iconColor: "text-emerald-500",
-    iconBg: "bg-emerald-50",
-    badge: "bg-emerald-100 text-emerald-700",
-    badgeLabel: "Payment Successful",
-    heading: "Thank you for your donation!",
-    subheading:
-      "Your payment has been successfully confirmed and processed.",
-    ringColor: "ring-emerald-100",
-  },
-  failed: {
-    icon: XCircle,
-    iconColor: "text-red-400",
-    iconBg: "bg-red-50",
-    badge: "bg-red-100 text-red-700",
-    badgeLabel: "Payment Failed",
-    heading: "Payment failed",
-    subheading: "Your transaction could not be completed.",
-    ringColor: "ring-red-100",
-  },
-  pending: {
-    icon: Clock,
-    iconColor: "text-amber-500",
-    iconBg: "bg-amber-50",
-    badge: "bg-amber-100 text-amber-700",
-    badgeLabel: "Pending",
-    heading: "Payment pending",
-    subheading: "We are still waiting for confirmation.",
-    ringColor: "ring-amber-100",
-  },
-  error: {
-    icon: XCircle,
-    iconColor: "text-red-400",
-    iconBg: "bg-red-50",
-    badge: "bg-red-100 text-red-700",
-    badgeLabel: "Error",
-    heading: "Something went wrong",
-    subheading: "Unable to determine payment status.",
-    ringColor: "ring-red-100",
-  },
-};
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
-export default function PaymentCallback() {
+const PaymentCallback = () => {
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState("loading");
+  const navigate = useNavigate();
+
+  const [status, setStatus] = useState("loading"); // loading | success | failed | error
   const [txnData, setTxnData] = useState(null);
 
+  // GET PARAMS FROM BACKEND REDIRECT
   const reference = searchParams.get("txn_ref");
   const amountParam = searchParams.get("amount");
-  const preVerified = searchParams.get("verified");
+  const campaignIdParam = searchParams.get("campaign_id");
+  const verified = searchParams.get("verified");
 
-useEffect(() => {
-  if (!reference) {
+  useEffect(() => {
+    // No reference → invalid request
+    if (!reference) {
+      setStatus("error");
+      return;
+    }
+
+    // SUCCESS
+    if (verified === "1") {
+      setStatus("success");
+      setTxnData({
+        reference,
+        amount: amountParam,
+        campaign_id: campaignIdParam,
+      });
+      return;
+    }
+
+    // FAILED
+    if (verified === "0") {
+      setStatus("failed");
+      setTxnData({
+        reference,
+        amount: amountParam,
+        campaign_id: campaignIdParam,
+      });
+      return;
+    }
+
+    // FALLBACK (shouldn't happen normally)
     setStatus("error");
-    return;
-  }
+  }, [reference, verified, amountParam, campaignIdParam]);
 
-  if (preVerified === "1") {
-    setStatus("success");
-    setTxnData({ amount: amountParam });
-  } else if (preVerified === "0") {
-    setStatus("failed");
-    setTxnData({ amount: amountParam });
-  } else {
-    setStatus("pending");
-  }
-}, [reference, preVerified, amountParam]);
-
-  const config = STATUS_CONFIG[status];
-  const Icon = config.icon;
-
-  const campaignId = txnData?.campaign_id;
-
-  const shareUrl = campaignId
-    ? `${window.location.origin}/campaigns/${campaignId}`
-    : `${window.location.origin}/campaigns`;
-
-  const rawAmount = txnData?.amount ?? amountParam;
-
-  const formattedAmount =
-    rawAmount != null && !isNaN(Number(rawAmount))
-      ? Number(rawAmount).toLocaleString("en-NG", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      : null;
+  const formatCurrency = (value) => {
+    if (!value) return "₦0";
+    return `₦${Number(value).toLocaleString()}`;
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-emerald-700 to-teal-600 text-white py-10">
-        <div className="max-w-lg mx-auto px-4">
-          <Link
-            to="/campaigns"
-            className="inline-flex items-center gap-2 text-emerald-200 hover:text-white text-sm mb-6"
-          >
-            <ArrowLeft className="size-4" /> Back to campaigns
-          </Link>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center">
+        
+        {/* LOADING */}
+        {status === "loading" && (
+          <>
+            <h2 className="text-xl font-semibold mb-2">Verifying Payment...</h2>
+            <p className="text-gray-500">Please wait...</p>
+          </>
+        )}
 
-          <h1 className="text-2xl font-bold">Payment Status</h1>
-          <p className="text-emerald-100 text-sm">
-            Secured by Interswitch Escrow
-          </p>
-        </div>
-      </div>
-
-      {/* Main Card */}
-      <div className="max-w-lg mx-auto px-4 py-10">
-        <motion.div
-          key={status}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border p-8 text-center"
-        >
-          <div className="mb-6">
-            <Icon className={`w-12 h-12 mx-auto ${config.iconColor}`} />
-          </div>
-
-          <h2 className="text-xl font-bold mb-2">{config.heading}</h2>
-          <p className="text-sm text-slate-500">{config.subheading}</p>
-
-          {formattedAmount && (
-            <p className="mt-4 text-lg font-semibold text-slate-800">
-              ₦{formattedAmount}
+        {/* SUCCESS */}
+        {status === "success" && (
+          <>
+            <div className="text-green-600 text-5xl mb-4">✔</div>
+            <h2 className="text-2xl font-bold mb-2">Payment Successful</h2>
+            <p className="text-gray-600 mb-4">
+              Thank you for your donation ❤️
             </p>
-          )}
 
-          {reference && (
-            <p className="text-xs text-slate-400 mt-2 font-mono">
-              Ref: {reference}
+            <div className="bg-gray-100 p-4 rounded-lg text-left text-sm">
+              <p><strong>Reference:</strong> {txnData?.reference}</p>
+              <p><strong>Amount:</strong> {formatCurrency(txnData?.amount)}</p>
+              {txnData?.campaign_id && (
+                <p><strong>Campaign ID:</strong> {txnData?.campaign_id}</p>
+              )}
+            </div>
+
+            <button
+              onClick={() => navigate("/")}
+              className="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Go Home
+            </button>
+          </>
+        )}
+
+        {/* FAILED */}
+        {status === "failed" && (
+          <>
+            <div className="text-red-600 text-5xl mb-4">✖</div>
+            <h2 className="text-2xl font-bold mb-2">Payment Failed</h2>
+            <p className="text-gray-600 mb-4">
+              Something went wrong with your payment.
             </p>
-          )}
 
-          <div className="mt-6 space-y-3">
-            <Button asChild className="w-full">
-              <Link to="/campaigns">
-                <Heart className="w-4 h-4 mr-2" />
-                Browse Campaigns
-              </Link>
-            </Button>
-          </div>
-        </motion.div>
+            <div className="bg-gray-100 p-4 rounded-lg text-left text-sm">
+              <p><strong>Reference:</strong> {txnData?.reference}</p>
+            </div>
 
-        {/* Trust Badges */}
-        <div className="mt-6 flex justify-center gap-6 text-sm text-slate-400">
-          <span className="flex items-center gap-1">
-            <ShieldCheck className="size-4 text-emerald-500" /> Secure
-          </span>
-          <span className="flex items-center gap-1">
-            <Building2 className="size-4 text-blue-500" /> Verified
-          </span>
-        </div>
+            <button
+              onClick={() => navigate("/")}
+              className="mt-6 w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition"
+            >
+              Try Again
+            </button>
+          </>
+        )}
+
+        {/* ERROR */}
+        {status === "error" && (
+          <>
+            <div className="text-yellow-600 text-5xl mb-4">⚠</div>
+            <h2 className="text-2xl font-bold mb-2">Invalid Transaction</h2>
+            <p className="text-gray-600 mb-4">
+              We could not verify this payment.
+            </p>
+
+            <button
+              onClick={() => navigate("/")}
+              className="mt-6 w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-black transition"
+            >
+              Go Home
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default PaymentCallback;

@@ -12,8 +12,9 @@ import ProgressBar from "./ProgressBar";
 import { initializeDonation, verifyDonation } from "@/lib/api";
 
 const INTERSWITCH_INLINE_SCRIPT =
-  "https://qa.interswitchng.com/collections/public/javascripts/inline-checkout.js";
+  "https://webpay.interswitchng.com/collections/public/javascripts/inline-checkout.js";
 
+// These must match your live dashboard and backend config
 const MERCHANT_CODE = "MX19437";
 const PAY_ITEM_ID = "MX19437_MERCHANT_APP";
 
