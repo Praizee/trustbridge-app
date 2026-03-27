@@ -348,7 +348,7 @@ export async function verifyHospital(payload) {
  * @param {{ campaign_id: number, amount: number }} payload
  */
 export async function requestWithdrawal(payload) {
-  const data = await apiFetch("/withdrawals/request.php", {
+  const data = await apiFetch("/api/withdrawals/request.php", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

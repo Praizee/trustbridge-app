@@ -1,0 +1,4 @@
+{"txnref":"DON_17745649007194","resp":"00","desc":"Approved by Financial Institution","cardNum":"","mac":""}
+{"txnref":"DON_17745651059491","resp":"00","desc":"Approved by Financial Institution","cardNum":"","mac":""}
+{"txnref":"DON_17745659476509","resp":"00","desc":"Approved by Financial Institution","cardNum":"","mac":""}
+{"txnref":"DON_17745660491023","resp":"00","desc":"Approved by Financial Institution","cardNum":"","mac":""}
