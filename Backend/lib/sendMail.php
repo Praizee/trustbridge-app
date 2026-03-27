@@ -12,20 +12,20 @@ function sendResetEmail($toEmail, $toName, $resetLink)
     $mail = new PHPMailer(true);
 
     try {
-        // SMTP CONFIG (CHANGE THIS)
+       
         $mail->isSMTP();
-        $mail->Host = 'smtp.ezirimkingdom.com.ng';
+        $mail->Host = '';
         $mail->SMTPAuth = true;
-        $mail->Username = 'trustbridge@ezirimkingdom.com.ng';
-        $mail->Password = 'Ot57405cf';
+        $mail->Username = '';
+        $mail->Password = '';
         $mail->SMTPSecure = 'ssl';
         $mail->Port = 465;
 
-        // Sender
+   
         $mail->setFrom('trustbridge@ezirimkingdom.com.ng', 'TrustBridge');
         $mail->addAddress($toEmail, $toName);
 
-        // HTML Email
+        
         $mail->isHTML(true);
         $mail->Subject = "Reset Your Password";
 
