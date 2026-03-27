@@ -33,6 +33,11 @@ export default function RequestHospitalVerification() {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
+        toast.error("Only PDF files are accepted. Please upload a PDF.");
+        e.target.value = "";
+        return;
+      }
       setFormValue("license_document", file);
     }
   };
@@ -168,31 +173,43 @@ export default function RequestHospitalVerification() {
             >
               License Document *
             </Label>
-            <p className="text-sm text-slate-500 mt-1 mb-3">
-              Upload your hospital's license or registration certificate (PDF,
-              JPG, PNG)
+            <p className="text-sm text-slate-500 mt-1">
+              Upload your hospital's official license or registration certificate (PDF format only) issued by the relevant authority (e.g., MDCN, State Ministry of Health, or CAC).
             </p>
+            <div className="flex flex-wrap gap-2 mt-2 mb-3">
+              <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                PDF only
+              </span>
+              <span className="text-xs text-slate-400">· Max 5MB</span>
+            </div>
             <div className="mt-2 relative">
               <input
                 id="license_document"
                 type="file"
                 onChange={handleFileChange}
-                accept=".pdf,.jpg,.jpeg,.png"
+                accept=".pdf,application/pdf"
+                capture={false}
                 className="hidden"
               />
               <label
                 htmlFor="license_document"
-                className="flex items-center justify-center gap-2 w-full p-6 border-2 border-dashed border-slate-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 cursor-pointer transition-colors"
+                className="flex items-center justify-center gap-3 w-full p-6 border-2 border-dashed border-slate-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 cursor-pointer transition-colors"
               >
-                <Upload className="w-5 h-5 text-slate-400" />
+                <Upload className="w-5 h-5 text-slate-400 shrink-0" />
                 <div className="text-center">
                   <p className="font-medium text-slate-700">
                     {form.license_document
                       ? form.license_document.name
-                      : "Click to upload document"}
+                      : "Click to upload license document"}
                   </p>
-                  {!form.license_document && (
-                    <p className="text-sm text-slate-500">or drag and drop</p>
+                  {!form.license_document ? (
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      PDF only · Max 5MB
+                    </p>
+                  ) : (
+                    <p className="text-xs text-emerald-600 mt-0.5">
+                      ✓ File selected — tap to change
+                    </p>
                   )}
                 </div>
               </label>
@@ -262,4 +279,3 @@ export default function RequestHospitalVerification() {
     </div>
   );
 }
-

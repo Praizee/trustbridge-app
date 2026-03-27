@@ -95,8 +95,18 @@ export const useAuthStore = create(
           });
 
           const resData = await res.json();
-          if (!res.ok)
-            throw new Error(resData.message || "Failed to fetch profile");
+
+          // Only logout on actual auth errors — not network blips or server errors
+          if (res.status === 401 || res.status === 403) {
+            get().logout();
+            return;
+          }
+
+          if (!res.ok) {
+            // Non-auth error: keep the session alive, just stop loading
+            set({ isLoading: false });
+            return;
+          }
 
           set({
             user: resData.data,
@@ -104,7 +114,8 @@ export const useAuthStore = create(
             isLoading: false,
           });
         } catch (error) {
-          get().logout();
+          // Network error — do NOT logout, keep session alive
+          set({ isLoading: false });
         }
       },
 
