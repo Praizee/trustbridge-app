@@ -402,3 +402,141 @@ export async function getCampaignDonations(campaignId) {
   return [];
 }
 
+// --- Admin: Dashboard ---------------------------------------------------------
+
+/**
+ * GET /admin/dashboard.php
+ * Returns platform-wide stats (users, hospitals, campaigns, donations).
+ */
+export async function getAdminDashboardStats() {
+  const data = await apiFetch("/admin/dashboard.php");
+  return data?.data ?? data;
+}
+
+// --- Admin: Users -------------------------------------------------------------
+
+/**
+ * GET /admin/users/index.php?page=:page&limit=:limit&search=:search
+ */
+export async function getAllUsers({ page = 1, limit = 20, search = "" } = {}) {
+  const params = new URLSearchParams({ page, limit });
+  if (search) params.set("search", search);
+  const data = await apiFetch(`/admin/users/index.php?${params.toString()}`);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+/**
+ * GET /admin/users/show.php?id=:id
+ */
+export async function showUser(id) {
+  const data = await apiFetch(`/admin/users/show.php?id=${id}`);
+  return data?.data ?? data;
+}
+
+/**
+ * POST /admin/users/activate.php  { user_id }
+ */
+export async function activateUser(user_id) {
+  return apiFetch("/admin/users/activate.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id }),
+  });
+}
+
+/**
+ * POST /admin/users/suspend.php  { user_id }
+ */
+export async function suspendUser(user_id) {
+  return apiFetch("/admin/users/suspend.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id }),
+  });
+}
+
+/**
+ * POST /admin/users/delete.php  { user_id }
+ */
+export async function deleteUser(user_id) {
+  return apiFetch("/admin/users/delete.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id }),
+  });
+}
+
+// --- Admin: Hospitals ---------------------------------------------------------
+
+/**
+ * GET /admin/hospitals/index.php?verified=:filter
+ * @param {0|1|null} verified  — null = all, 1 = verified, 0 = unverified
+ */
+export async function getAllHospitals(verified = null) {
+  const params = new URLSearchParams();
+  if (verified !== null) params.set("verified", String(verified));
+  const qs = params.toString();
+  const data = await apiFetch(
+    `/admin/hospitals/index.php${qs ? `?${qs}` : ""}`,
+  );
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+/**
+ * GET /admin/hospitals/show.php?id=:id
+ */
+export async function showHospital(id) {
+  const data = await apiFetch(`/admin/hospitals/show.php?id=${id}`);
+  return data?.data ?? data;
+}
+
+/**
+ * POST /admin/hospitals/verify.php  { hospital_id }
+ * Super-admin manually marks a hospital as verified (verified = 1).
+ */
+export async function verifyHospitalAdmin(hospital_id) {
+  return apiFetch("/admin/hospitals/verify.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hospital_id }),
+  });
+}
+
+/**
+ * POST /admin/hospitals/disable.php  { hospital_id }
+ */
+export async function disableHospital(hospital_id) {
+  return apiFetch("/admin/hospitals/disable.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hospital_id }),
+  });
+}
+
+// --- Admin: Withdrawals -------------------------------------------------------
+
+/**
+ * GET /admin/withdrawals/pending.php
+ * Returns all pending withdrawal requests.
+ */
+export async function getPendingWithdrawals() {
+  const data = await apiFetch("/admin/withdrawals/pending.php");
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+/**
+ * POST /admin/withdrawals/approve.php  { withdrawal_id }
+ */
+export async function approveWithdrawal(withdrawal_id) {
+  return apiFetch("/admin/withdrawals/approve.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ withdrawal_id }),
+  });
+}

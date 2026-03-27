@@ -48,15 +48,32 @@ import {
   updateCampaignStatus,
   deleteCampaignAdmin,
   BASE_URL,
+  // newly wired
+  getAdminDashboardStats,
+  getAllUsers,
+  activateUser,
+  suspendUser,
+  deleteUser,
+  getAllHospitals,
+  verifyHospitalAdmin,
+  disableHospital,
+  getPendingWithdrawals,
+  approveWithdrawal,
 } from "@/lib/api";
 
 export default function SuperAdminDashboard() {
   const [campaigns, setCampaigns] = useState([]);
   const [hospitals, setHospitals] = useState([]);
   const [hospitalRequests, setHospitalRequests] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUserActing, setIsUserActing] = useState(false);
+  const [isWithdrawalApproving, setIsWithdrawalApproving] = useState(false);
+  const [isHospitalActing, setIsHospitalActing] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState(null);
   const [reviewCampaign, setReviewCampaign] = useState(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -67,11 +84,21 @@ export default function SuperAdminDashboard() {
   });
 
   const fetchAll = () => {
-    Promise.all([getCampaigns(), getHospitals(), getPendingHospitalRequests()])
-      .then(([cData, hData, reqData]) => {
+    Promise.all([
+      getCampaigns(),
+      getAllHospitals(),
+      getPendingHospitalRequests(),
+      getAllUsers(),
+      getPendingWithdrawals(),
+      getAdminDashboardStats(),
+    ])
+      .then(([cData, hData, reqData, uData, wData, stats]) => {
         setCampaigns(cData);
         setHospitals(hData);
         setHospitalRequests(reqData);
+        setUsers(uData);
+        setPendingWithdrawals(wData);
+        setDashboardStats(stats);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -166,6 +193,89 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  // --- User handlers ---
+  const handleActivateUser = async (user) => {
+    setIsUserActing(true);
+    try {
+      await activateUser(user.id);
+      toast.success(`✓ ${user.name} activated.`);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to activate user.");
+    } finally {
+      setIsUserActing(false);
+    }
+  };
+
+  const handleSuspendUser = async (user) => {
+    setIsUserActing(true);
+    try {
+      await suspendUser(user.id);
+      toast.success(`${user.name} suspended.`);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to suspend user.");
+    } finally {
+      setIsUserActing(false);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Delete user "${user.name}"? This cannot be undone.`)) return;
+    setIsUserActing(true);
+    try {
+      await deleteUser(user.id);
+      toast.success(`User "${user.name}" deleted.`);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to delete user.");
+    } finally {
+      setIsUserActing(false);
+    }
+  };
+
+  // --- Withdrawal handlers ---
+  const handleApproveWithdrawal = async (w) => {
+    setIsWithdrawalApproving(true);
+    try {
+      await approveWithdrawal(w.id);
+      toast.success(`✓ Withdrawal #${w.id} approved.`);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to approve withdrawal.");
+    } finally {
+      setIsWithdrawalApproving(false);
+    }
+  };
+
+  // --- Hospital admin handlers ---
+  const handleVerifyHospitalAdmin = async (h) => {
+    setIsHospitalActing(true);
+    try {
+      await verifyHospitalAdmin(h.id);
+      toast.success(`✓ "${h.name}" verified.`);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to verify hospital.");
+    } finally {
+      setIsHospitalActing(false);
+    }
+  };
+
+  const handleDisableHospital = async (h) => {
+    if (!window.confirm(`Disable "${h.name}"?`)) return;
+    setIsHospitalActing(true);
+    try {
+      await disableHospital(h.id);
+      toast.success(`"${h.name}" disabled.`);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.message || "Failed to disable hospital.");
+    } finally {
+      setIsHospitalActing(false);
+    }
+  };
+
   const stats = [
     {
       label: "Pending Hospital Requests",
@@ -185,15 +295,16 @@ export default function SuperAdminDashboard() {
     },
     {
       label: "Total Raised",
-      //   value: `₦${(totalRaised / 1_000_000).toFixed(1)}M`,
-      value: `₦0.0`,
+      value: dashboardStats
+        ? `₦${((dashboardStats.donations?.total_amount || 0) / 1_000_000).toFixed(1)}M`
+        : `₦0.0M`,
       icon: TrendingUp,
       color: "text-emerald-600",
       bg: "bg-emerald-50",
     },
     {
       label: "Partner Hospitals",
-      value: hospitals.length,
+      value: dashboardStats?.hospitals?.total ?? hospitals.length,
       icon: Building2,
       color: "text-blue-600",
       bg: "bg-blue-50",
@@ -316,6 +427,25 @@ export default function SuperAdminDashboard() {
             >
               <FileText className="w-3.5 h-3.5 mr-1.5" />
               All Campaigns ({campaigns.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="users"
+              className="rounded-lg text-sm data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:shadow-none px-4 py-2"
+            >
+              <Shield className="w-3.5 h-3.5 mr-1.5" />
+              Users ({dashboardStats?.users?.total ?? users.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="withdrawals"
+              className="rounded-lg text-sm data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700 data-[state=active]:shadow-none px-4 py-2"
+            >
+              <Banknote className="w-3.5 h-3.5 mr-1.5" />
+              Withdrawals
+              {pendingWithdrawals.length > 0 && (
+                <span className="ml-2 bg-rose-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {pendingWithdrawals.length}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
           {/* </div> */}
@@ -747,13 +877,16 @@ export default function SuperAdminDashboard() {
                         <TableHead className="text-xs font-semibold text-slate-500">
                           Status
                         </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500 text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {hospitals.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={5}
+                            colSpan={6}
                             className="text-center py-12 text-slate-400 text-sm"
                           >
                             No hospitals registered.
@@ -800,11 +933,39 @@ export default function SuperAdminDashboard() {
                             <TableCell>
                               <Badge
                                 className={
-                                  "bg-emerald-100 text-emerald-700 border-0"
+                                  h.verified
+                                    ? "bg-emerald-100 text-emerald-700 border-0"
+                                    : "bg-amber-100 text-amber-700 border-0"
                                 }
                               >
-                                ✓ Verified
+                                {h.verified ? "✓ Verified" : "Unverified"}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {!h.verified && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={isHospitalActing}
+                                    onClick={() => handleVerifyHospitalAdmin(h)}
+                                    className="text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                                    Verify
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={isHospitalActing}
+                                  onClick={() => handleDisableHospital(h)}
+                                  className="text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                >
+                                  <XCircle className="w-3.5 h-3.5 mr-1" />
+                                  Disable
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -921,6 +1082,163 @@ export default function SuperAdminDashboard() {
               </Card>
             </motion.div>
           </TabsContent>
+
+          {/*  Tab 5: Users  */}
+          <TabsContent value="users">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card className="shadow-sm border-slate-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/60">
+                        <TableHead className="text-xs font-semibold text-slate-500">Name</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Email</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Role</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Status</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Joined</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
+                            No users found.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        users.map((u) => {
+                          const isActive = u.status === "active";
+                          return (
+                            <TableRow key={u.id} className="hover:bg-slate-50/50">
+                              <TableCell className="font-medium text-slate-800 text-sm">{u.name}</TableCell>
+                              <TableCell className="text-sm text-slate-500">{u.email}</TableCell>
+                              <TableCell>
+                                <Badge className="bg-slate-100 text-slate-600 border-0 text-xs capitalize">
+                                  {u.role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  className={
+                                    isActive
+                                      ? "bg-emerald-100 text-emerald-700 border-0 text-xs"
+                                      : "bg-red-100 text-red-600 border-0 text-xs"
+                                  }
+                                >
+                                  {u.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-slate-400">
+                                {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {isActive ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={isUserActing}
+                                      onClick={() => handleSuspendUser(u)}
+                                      className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+                                    >
+                                      Suspend
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={isUserActing}
+                                      onClick={() => handleActivateUser(u)}
+                                      className="text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                    >
+                                      Activate
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={isUserActing}
+                                    onClick={() => handleDeleteUser(u)}
+                                    className="text-xs text-red-600 border-red-200 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          {/*  Tab 6: Withdrawals  */}
+          <TabsContent value="withdrawals">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card className="shadow-sm border-slate-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/60">
+                        <TableHead className="text-xs font-semibold text-slate-500">ID</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Campaign</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Amount</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Status</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Requested</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingWithdrawals.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
+                            No pending withdrawals.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        pendingWithdrawals.map((w) => (
+                          <TableRow key={w.id} className="hover:bg-slate-50/50">
+                            <TableCell className="text-sm font-mono text-slate-500">#{w.id}</TableCell>
+                            <TableCell className="text-sm font-medium text-slate-800">
+                              {w.campaign_title || w.campaign_id || "—"}
+                            </TableCell>
+                            <TableCell className="text-sm font-semibold text-emerald-700">
+                              ₦{(w.amount || 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-amber-100 text-amber-700 border-0 text-xs capitalize">
+                                {w.status || "pending"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-400">
+                              {w.created_at ? new Date(w.created_at).toLocaleDateString() : "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                disabled={isWithdrawalApproving}
+                                onClick={() => handleApproveWithdrawal(w)}
+                                className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                                Approve
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
         </Tabs>
       </div>
 
@@ -964,4 +1282,3 @@ export default function SuperAdminDashboard() {
     </div>
   );
 }
-
