@@ -54,7 +54,6 @@ async function apiFetch(path, options = {}) {
  */
 export async function getCampaigns() {
   const data = await apiFetch("/campaigns/list.php");
-  // API returns { status, data: { page, campaigns: [...] } }
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
   if (Array.isArray(data?.data?.campaigns)) return data.data.campaigns;
@@ -179,8 +178,6 @@ export async function resetPassword(token, password) {
  * @param {FormData} formData
  */
 export async function createCampaign(formData) {
-  // We use apiFetch but rely on fetch to automatically set Content-Type for FormData
-  // When body is FormData, do NOT set Content-Type header manually
   const data = await apiFetch(`/campaigns/create.php`, {
     method: "POST",
     credentials: "include",
@@ -223,9 +220,20 @@ export async function getPendingHospitalRequests() {
 
 /**
  * POST /admin/hospitals/approve.php
+ *
+ * Payload:
+ * {
+ *   request_id: number,
+ *   hospital_name: string,
+ *   hospital_address: string,
+ *   bank_account: string,
+ *   bank_name: string,
+ *   bank_code: string
+ * }
  */
 export async function approveHospital(payload) {
-  const data = await apiFetch(`/admin/hospitals/approve.php`, {
+  // const data = await apiFetch(`/admin/hospitals/approve.php`, {
+  const data = await apiFetch(`/hospitals/verify.php`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -233,6 +241,7 @@ export async function approveHospital(payload) {
     credentials: "include",
     body: JSON.stringify(payload),
   });
+  console.log(data)
   return data;
 }
 
@@ -244,11 +253,6 @@ export async function getHospitalCampaigns() {
   const data = await apiFetch("/hospitals/my-campaigns.php");
   return data?.data ?? data;
 }
-
-// export async function getHospitalCampaigns() {
-//   const data = await apiFetch("/hospitals/my-campaigns.php");
-//   return data?.data ?? data;
-// }
 
 // --- Donations ----------------------------------------------------------------
 
@@ -262,12 +266,9 @@ export async function getHospitalCampaigns() {
  *   status: 200,
  *   message: "Donation initialized",
  *   reference: "DON_123456",
- *   amount: 5000,          <- naira; DonationWidget multiplies × 100 for Interswitch (kobo)
+ *   amount: 5000,
  *   email: "user@mail.com"
  * }
- *
- * @param {{ campaign_id: number, name: string, email: string, amount: number }} payload
- * @returns {Promise<{ reference: string, amount: number, email: string }>}
  */
 export async function initializeDonation(payload) {
   const res = await fetch(`${API_URL}/donations/initiate.php`, {
@@ -293,7 +294,6 @@ export async function initializeDonation(payload) {
     throw new Error("No payment reference returned by server.");
   }
 
-  // Response is flat: return body directly (reference, amount, email at top level)
   return body;
 }
 
@@ -313,7 +313,6 @@ export async function initializeDonation(payload) {
  *   bank_code: string
  * }} payload
  */
-
 export async function verifyHospital(payload) {
   const data = await apiFetch("/hospitals/verify.php", {
     method: "POST",
@@ -323,23 +322,7 @@ export async function verifyHospital(payload) {
     body: JSON.stringify(payload),
   });
   return data?.data ?? data;
-  if (!body?.reference) {
-    throw new Error("No payment reference returned by server.");
-  }
-
-  // Response is flat: return body directly (reference, amount, email at top level)
-  return body;
 }
-
-/**
- * GET /donations/verify.php?reference=REF&amount=AMOUNT
- *
- * Called by DonationWidget (inline onComplete) and PaymentCallback (redirect fallback).
- * Returns the full response body so callers can check body.status === 200.
- *
- * @param {string} reference  — DON_xxx / txn_ref value from Interswitch
- * @param {number} [amount]   — original amount in naira (not kobo)
- */
 
 /**
  * POST /withdrawals/request.php
@@ -358,32 +341,17 @@ export async function requestWithdrawal(payload) {
   return data?.data ?? data;
 }
 
-// export async function requestWithdrawal(payload) {
-//   const data = await apiFetch("/withdrawals/request.php", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//       ...authHeaders(),
-//     },
-//     body: JSON.stringify(payload),
-//   });
-//   return data?.data ?? data;
-// }
-
 /**
- * GET /donations/verify.php?reference=:ref
- *
- * Called on /payment/callback after Interswitch redirects back.
- * The txn_ref from the callback URL query param is passed as reference.
+ * GET /donations/verify.php?reference=:ref&amount=:amount
  *
  * @param {string} reference
+ * @param {number} [amount]
  */
-
 export async function verifyDonation(reference, amount) {
   const params = new URLSearchParams({ reference });
   if (amount != null) params.set("amount", String(amount));
   const data = await apiFetch(`/donations/verify.php?${params.toString()}`);
-  return data; // return full body — caller checks data.status === 200
+  return data;
 }
 
 /**

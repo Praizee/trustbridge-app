@@ -48,7 +48,6 @@ import {
   updateCampaignStatus,
   deleteCampaignAdmin,
   BASE_URL,
-  // newly wired
   getAdminDashboardStats,
   getAllUsers,
   activateUser,
@@ -78,8 +77,11 @@ export default function SuperAdminDashboard() {
   const [reviewCampaign, setReviewCampaign] = useState(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+
+  // FIX: added bank_name to approveForm state
   const [approveForm, setApproveForm] = useState({
     bank_account: "",
+    bank_name: "",
     bank_code: "",
   });
 
@@ -118,7 +120,6 @@ export default function SuperAdminDashboard() {
     .filter((c) => c.status === "disbursed")
     .reduce((s, c) => s + (c.target_amount || 0), 0);
   const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
-  //   const totalRaised = campaigns.reduce((s, c) => s + (c.raised_amount || 0), 0);
 
   const handleApprove = async (c) => {
     try {
@@ -159,9 +160,11 @@ export default function SuperAdminDashboard() {
   };
 
   const handleApproveHospital = async () => {
+    // FIX: validate bank_name too
     if (
       !selectedRequest ||
       !approveForm.bank_account ||
+      !approveForm.bank_name ||
       !approveForm.bank_code
     ) {
       toast.error("Please fill in all required fields.");
@@ -170,11 +173,13 @@ export default function SuperAdminDashboard() {
 
     setIsApproving(true);
     try {
+      // FIX: include bank_name in payload
       await approveHospital({
         request_id: selectedRequest.id,
         hospital_name: selectedRequest.hospital_name,
         hospital_address: selectedRequest.hospital_address,
         bank_account: approveForm.bank_account,
+        bank_name: approveForm.bank_name,
         bank_code: approveForm.bank_code,
       });
 
@@ -183,7 +188,8 @@ export default function SuperAdminDashboard() {
       );
       setApproveDialogOpen(false);
       setSelectedRequest(null);
-      setApproveForm({ bank_account: "", bank_code: "" });
+      // FIX: reset bank_name too
+      setApproveForm({ bank_account: "", bank_name: "", bank_code: "" });
       fetchAll();
     } catch (err) {
       toast.error(err.message || "Failed to approve hospital.");
@@ -448,7 +454,6 @@ export default function SuperAdminDashboard() {
               )}
             </TabsTrigger>
           </TabsList>
-          {/* </div> */}
 
           {/*  Tab 1: Hospital Requests  */}
           <TabsContent value="requests">
@@ -521,9 +526,7 @@ export default function SuperAdminDashboard() {
                             <TableCell>
                               <span className="text-xs text-slate-500">
                                 {req.created_at
-                                  ? new Date(
-                                      req.created_at,
-                                    ).toLocaleDateString()
+                                  ? new Date(req.created_at).toLocaleDateString()
                                   : "N/A"}
                               </span>
                             </TableCell>
@@ -574,21 +577,15 @@ export default function SuperAdminDashboard() {
                                     <div className="space-y-4 mt-4">
                                       <div className="bg-indigo-50 rounded-lg p-3 space-y-1 mb-4">
                                         <p className="text-sm text-slate-700">
-                                          <span className="font-medium">
-                                            Hospital:
-                                          </span>{" "}
+                                          <span className="font-medium">Hospital:</span>{" "}
                                           {selectedRequest.hospital_name}
                                         </p>
                                         <p className="text-sm text-slate-700">
-                                          <span className="font-medium">
-                                            Address:
-                                          </span>{" "}
+                                          <span className="font-medium">Address:</span>{" "}
                                           {selectedRequest.hospital_address}
                                         </p>
                                         <p className="text-sm text-slate-700">
-                                          <span className="font-medium">
-                                            Email:
-                                          </span>{" "}
+                                          <span className="font-medium">Email:</span>{" "}
                                           {selectedRequest.contact_email}
                                         </p>
                                       </div>
@@ -604,6 +601,23 @@ export default function SuperAdminDashboard() {
                                             setApproveForm((p) => ({
                                               ...p,
                                               bank_account: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                      </div>
+
+                                      {/* FIX: added Bank Name field */}
+                                      <div>
+                                        <Label className="text-sm font-medium text-slate-700 mb-1.5 block">
+                                          Bank Name *
+                                        </Label>
+                                        <Input
+                                          placeholder="e.g., Access Bank"
+                                          value={approveForm.bank_name}
+                                          onChange={(e) =>
+                                            setApproveForm((p) => ({
+                                              ...p,
+                                              bank_name: e.target.value,
                                             }))
                                           }
                                         />
@@ -743,8 +757,7 @@ export default function SuperAdminDashboard() {
                                       className="text-blue-600 text-xs h-8 gap-1.5 px-2"
                                       onClick={() => setReviewCampaign(c)}
                                     >
-                                      <Eye className="w-3.5 h-3.5" /> Review
-                                      Invoice
+                                      <Eye className="w-3.5 h-3.5" /> Review Invoice
                                     </Button>
                                   </DialogTrigger>
                                   <DialogContent className="max-w-xl">
@@ -757,54 +770,33 @@ export default function SuperAdminDashboard() {
                                       <div className="mt-2">
                                         <div className="bg-slate-50 rounded-xl p-4 text-sm space-y-1.5 mb-4">
                                           <p>
-                                            <span className="font-medium text-slate-700">
-                                              Campaign:
-                                            </span>{" "}
-                                            <span className="text-slate-600">
-                                              {reviewCampaign.title}
-                                            </span>
+                                            <span className="font-medium text-slate-700">Campaign:</span>{" "}
+                                            <span className="text-slate-600">{reviewCampaign.title}</span>
                                           </p>
                                           <p>
-                                            <span className="font-medium text-slate-700">
-                                              Patient:
-                                            </span>{" "}
-                                            <span className="text-slate-600">
-                                              {reviewCampaign.patient_name}
-                                            </span>
+                                            <span className="font-medium text-slate-700">Patient:</span>{" "}
+                                            <span className="text-slate-600">{reviewCampaign.patient_name}</span>
                                           </p>
                                           <p>
-                                            <span className="font-medium text-slate-700">
-                                              Hospital:
-                                            </span>{" "}
-                                            <span className="text-slate-600">
-                                              {reviewCampaign.hospital_name}
-                                            </span>
+                                            <span className="font-medium text-slate-700">Hospital:</span>{" "}
+                                            <span className="text-slate-600">{reviewCampaign.hospital_name}</span>
                                           </p>
                                           <p>
-                                            <span className="font-medium text-slate-700">
-                                              Amount:
-                                            </span>{" "}
+                                            <span className="font-medium text-slate-700">Amount:</span>{" "}
                                             <span className="font-bold text-emerald-700">
-                                              ₦
-                                              {(
-                                                reviewCampaign.target_amount ||
-                                                0
-                                              ).toLocaleString()}
+                                              ₦{(reviewCampaign.target_amount || 0).toLocaleString()}
                                             </span>
                                           </p>
                                         </div>
                                         <div className="border border-slate-200 rounded-xl p-4 min-h-[160px] flex items-center justify-center bg-slate-50">
-                                          {reviewCampaign.invoice_url?.endsWith(
-                                            ".pdf",
-                                          ) ? (
+                                          {reviewCampaign.invoice_url?.endsWith(".pdf") ? (
                                             <a
                                               href={reviewCampaign.invoice_url}
                                               target="_blank"
                                               rel="noopener noreferrer"
                                               className="text-blue-600 hover:underline flex items-center gap-2 text-sm"
                                             >
-                                              <FileText className="w-5 h-5" />{" "}
-                                              Open PDF Invoice{" "}
+                                              <FileText className="w-5 h-5" /> Open PDF Invoice{" "}
                                               <ExternalLink className="w-3.5 h-3.5" />
                                             </a>
                                           ) : (
@@ -862,33 +854,18 @@ export default function SuperAdminDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50/60">
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Hospital
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Location
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Bank Details
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Account
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Status
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500 text-right">
-                          Actions
-                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Hospital</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Location</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Bank Details</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Account</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Status</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {hospitals.length === 0 ? (
                         <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className="text-center py-12 text-slate-400 text-sm"
-                          >
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
                             No hospitals registered.
                           </TableCell>
                         </TableRow>
@@ -900,11 +877,7 @@ export default function SuperAdminDashboard() {
                                 <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
                                   <Building2 className="w-4 h-4 text-blue-600" />
                                 </div>
-                                <div>
-                                  <p className="font-semibold text-slate-800 text-sm">
-                                    {h.name}
-                                  </p>
-                                </div>
+                                <p className="font-semibold text-slate-800 text-sm">{h.name}</p>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -915,12 +888,8 @@ export default function SuperAdminDashboard() {
                             </TableCell>
                             <TableCell>
                               <div className="text-sm text-slate-700">
-                                <p className="font-medium">
-                                  {h.bank_name || "Unknown Bank"}
-                                </p>
-                                <p className="text-xs text-slate-400">
-                                  {h.account_name || "No Name"}
-                                </p>
+                                <p className="font-medium">{h.bank_name || "Unknown Bank"}</p>
+                                <p className="text-xs text-slate-400">{h.account_name || "No Name"}</p>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -985,33 +954,18 @@ export default function SuperAdminDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50/60">
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Campaign
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Hospital
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Raised
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Target
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500">
-                          Status
-                        </TableHead>
-                        <TableHead className="text-xs font-semibold text-slate-500 text-right">
-                          Actions
-                        </TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Campaign</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Hospital</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Raised</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Target</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500">Status</TableHead>
+                        <TableHead className="text-xs font-semibold text-slate-500 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {campaigns.length === 0 ? (
                         <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className="text-center py-12 text-slate-400 text-sm"
-                          >
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
                             No campaigns yet.
                           </TableCell>
                         </TableRow>
@@ -1021,21 +975,17 @@ export default function SuperAdminDashboard() {
                             {
                               active: "bg-emerald-100 text-emerald-700",
                               funded: "bg-blue-100 text-blue-700",
-                              disbursement_requested:
-                                "bg-amber-100 text-amber-700",
+                              disbursement_requested: "bg-amber-100 text-amber-700",
                               disbursed: "bg-purple-100 text-purple-700",
                             }[c.status] || "bg-slate-100 text-slate-600";
                           return (
-                            <TableRow
-                              key={c.id}
-                              className="hover:bg-slate-50/50"
-                            >
+                            <TableRow key={c.id} className="hover:bg-slate-50/50">
                               <TableCell>
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 shrink-0">
                                     <img
                                       src={
-                                        c.image_url ||
+                                        c.cover_image ||
                                         "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=60"
                                       }
                                       alt={c.title}
@@ -1047,9 +997,7 @@ export default function SuperAdminDashboard() {
                                   </p>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-sm text-slate-600">
-                                {c.hospital_name}
-                              </TableCell>
+                              <TableCell className="text-sm text-slate-600">{c.hospital_name}</TableCell>
                               <TableCell className="font-semibold text-sm text-emerald-700">
                                 ₦{(c.raised_amount || 0).toLocaleString()}
                               </TableCell>
@@ -1057,9 +1005,7 @@ export default function SuperAdminDashboard() {
                                 ₦{(c.target_amount || 0).toLocaleString()}
                               </TableCell>
                               <TableCell>
-                                <Badge
-                                  className={`${statusColor} border-0 text-xs capitalize`}
-                                >
+                                <Badge className={`${statusColor} border-0 text-xs capitalize`}>
                                   {(c.status || "").replace(/_/g, " ")}
                                 </Badge>
                               </TableCell>
@@ -1238,7 +1184,6 @@ export default function SuperAdminDashboard() {
               </Card>
             </motion.div>
           </TabsContent>
-
         </Tabs>
       </div>
 
