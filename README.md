@@ -50,5 +50,5 @@ While this MVP proves the core Escrow-to-Hospital concept, our roadmap for scali
 
 ---
 
-_Built with ❤️ for the Interswitch Buildathon._
+_Built with ❤️ for the Enyata <> Interswitch Hackathon._
 
