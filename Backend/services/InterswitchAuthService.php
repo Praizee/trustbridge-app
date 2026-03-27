@@ -5,8 +5,8 @@ class InterswitchAuthService
     private $conn;
 
     private string $tokenUrl = "https://passport-v2.k8.isw.la/passport/oauth/token";
-    private string $clientId = "IKIAE65A6518BCB3D98128BA90969284F51A976C6D7E";
-    private string $clientSecret = "3E4B30BEB7FE71D5ACC156E25D6FB33B18FB467F";
+    private string $clientId = "";
+    private string $clientSecret = "";
 
     public function __construct($db)
     {
