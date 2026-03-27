@@ -113,7 +113,7 @@ Authorization: Bearer <token>
 
 ## 🏥 Hospital Verification
 
-- TIN & CAC validation via external APIs
+- TIN & CAC validation via Interswitch MARKETPLACE APIs
 - Only verified hospitals can receive funds
 
 ---
@@ -213,7 +213,7 @@ All endpoints tested using Postman.
 
 ## 🔐 Security Notice
 
-To ensure security, sensitive files (e.g., database configuration, API keys, and payment credentials) are not included in this repository.
+To ensure security & compliance, sensitive files (e.g., database configuration, API keys, and payment credentials) are not included in this repository.
 
 The following files have been excluded:
 
@@ -222,6 +222,43 @@ The following files have been excluded:
 - config/payment.php
 
 Please use the provided .example files and replace them with your own environment-specific values.
+
+---
+
+## ⚠️ Integration Note (Interswitch Payout Environment & API MARKETPLACE)
+
+Due to limitations in accessing a fully provisioned live Interswitch payout account wallet, full payout testing could not be completed, Also not having a live marketplace account couldn't allow us create wallets, fund it and as well make calls for CAC and TIN enpoints, to verify the hospitals.
+
+However, API responses confirm correct integration and readiness once wallet provisioning is complete.
+
+Sample response:
+{
+  "status": 400,
+  "message": "Hospital verification failed",
+  "data": {
+    "status_code": 409,
+    "response": {
+      "message": "Unexpected error: User wallet not found",
+      "responseCode": "ERROR"
+    }
+  }
+}
+
+---
+
+## 🔑 Test Credentials
+
+Campaign Creator  
+Email: ezirimchukwuebuka24@gmail.com  
+Password: @Kingdom123  
+
+Hospital Admin  
+Email: upthph@gmail.com  
+Password: #Hospital123  
+
+Admin  
+Email: king@gmail.com  
+Password: 12345678  
 
 ---
 
