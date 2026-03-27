@@ -1,90 +1,91 @@
 <?php
-
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/../utils/cors.php';
-require_once __DIR__ . '/../utils/response.php';
-require_once __DIR__ . '/../utils/helpers.php';
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../middleware/AuthMiddleware.php';
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 
 header("Content-Type: application/json");
 
-$authUser = AuthMiddleware::authorize(['hospital']);
 
-$db = (new Database())->connect();
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
+
+
+$user = AuthMiddleware::authenticate();
 
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-if (!$data || !is_array($data)) {
-    jsonResponse(400, "Invalid JSON payload");
-}
+$campaign_id = $data['campaign_id'] ?? null;
+$amount = $data['amount'] ?? null;
 
-
-$campaignId = isset($data['campaign_id']) ? (int)$data['campaign_id'] : 0;
-$amount = isset($data['amount']) ? (float)$data['amount'] : 0;
-
-
-if ($campaignId <= 0) {
-    jsonResponse(422, "campaign_id is required");
-}
-
-if ($amount <= 0) {
-    jsonResponse(422, "Amount must be greater than 0");
+if (!$campaign_id || !$amount) {
+    echo json_encode([
+        "status" => 400,
+        "message" => "campaign_id and amount are required"
+    ]);
+    exit;
 }
 
 try {
-   
-    $stmt = $db->prepare("SELECT * FROM hospitals WHERE user_id = ?");
-    $stmt->execute([$authUser['user_id']]);
-    $hospital = $stmt->fetch(PDO::FETCH_ASSOC);
+    $db = (new Database())->connect();
 
-    if (!$hospital || (int)$hospital['verified'] !== 1) {
-        jsonResponse(403, "Hospital not verified");
-    }
 
-    $stmt = $db->prepare("SELECT * FROM campaigns WHERE id = ?");
-    $stmt->execute([$campaignId]);
+    $stmt = $db->prepare("SELECT hospital_id FROM campaigns WHERE id = ?");
+    $stmt->execute([$campaign_id]);
     $campaign = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$campaign) {
-        jsonResponse(404, "Campaign not found");
+        echo json_encode([
+            "status" => 404,
+            "message" => "Campaign not found"
+        ]);
+        exit;
     }
 
-    if ((int)$campaign['hospital_id'] !== (int)$hospital['id']) {
-        jsonResponse(403, "Unauthorized for this campaign");
+    $hospital_id = $campaign['hospital_id'];
+
+ 
+    $check = $db->prepare("
+        SELECT id FROM withdrawals 
+        WHERE campaign_id = ? AND status = 'pending'
+    ");
+    $check->execute([$campaign_id]);
+
+    if ($check->fetch()) {
+        echo json_encode([
+            "status" => 400,
+            "message" => "Withdrawal already requested and pending"
+        ]);
+        exit;
     }
 
-    if ((float)$campaign['raised_amount'] < (float)$campaign['target_amount']) {
-        jsonResponse(422, "Campaign is not fully funded");
-    }
-
-   
-    $stmt = $db->prepare("SELECT id FROM withdrawals WHERE campaign_id = ?");
-    $stmt->execute([$campaignId]);
-
-    if ($stmt->fetch()) {
-        jsonResponse(409, "Withdrawal already requested");
-    }
-
-
+ 
     $stmt = $db->prepare("
-        INSERT INTO withdrawals (campaign_id, hospital_id, amount, status, created_at)
+        INSERT INTO withdrawals (hospital_id, campaign_id, amount, status, created_at)
         VALUES (?, ?, ?, 'pending', NOW())
     ");
 
-    $stmt->execute([
-        $campaignId,
-        $hospital['id'],
-        $amount
+    $stmt->execute([$hospital_id, $campaign_id, $amount]);
+
+    echo json_encode([
+        "status" => 200,
+        "message" => "Withdrawal request submitted successfully"
     ]);
 
-    jsonResponse(200, "Withdrawal request submitted successfully");
-
 } catch (Throwable $e) {
-    jsonResponse(500, "Withdrawal failed", [
-        "error" => $e->getMessage()
+    echo json_encode([
+        "status" => 500,
+        "message" => $e->getMessage(),
+        "line" => $e->getLine()
     ]);
 }

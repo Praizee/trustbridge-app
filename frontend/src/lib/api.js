@@ -383,7 +383,8 @@ export async function requestWithdrawal(payload) {
     },
     body: JSON.stringify(payload),
   });
-  return data?.data ?? data;
+
+  return data; // ✅ FIXED
 }
 
 /**
