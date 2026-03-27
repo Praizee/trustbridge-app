@@ -1,16 +1,70 @@
-# React + Vite
+# 🏥 TrustBridge - Frontend Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend repository for **TrustBridge**, built with React and Vite. It serves as the user interface for our escrow-backed medical crowdfunding platform, featuring direct integration with the Interswitch Web Checkout.
 
-Currently, two official plugins are available:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
 
-## React Compiler
+- **Framework:** React + Vite
+- **Styling:** Tailwind CSS v3
+- **State Management:** Zustand
+- **Routing:** React Router DOM
+- **Animations:** Framer Motion
+- **Payment Integration:** Interswitch Web Checkout (Inline WebPay)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Follow these instructions to get the frontend running locally on your machine.
+
+
+### Prerequisites
+
+Ensure you have [Node.js](https://nodejs.org/) installed. We recommend using `pnpm` as your package manager.
+
+### 1. Installation
+
+Navigate to the frontend directory and install the required dependencies:
+
+```bash
+# Ensure you are in the frontend folder
+cd frontend
+
+# Install dependencies
+pnpm install
+```
+
+
+### 2\. Environment Variables
+
+Create a `.env` file in the root of the `frontend` directory and add your backend API URL. 
+
+### 3\. Run the Development Server
+
+Start the Vite development server:
+
+```bash
+pnpm dev
+```
+
+Open [http://localhost:5173](https://www.google.com/search?q=http://localhost:5173) in your browser to view the application.
+
+
+## Project Structure
+
+To keep the codebase modular and scalable, the `src` directory is organized as follows:
+
+- `/components` - Reusable UI elements (Buttons, Forms, Campaign Cards) and layout wrappers (Navbar, Footer).
+- `/pages` - The core route views (Home, Campaign Details, Dashboards).
+- `/store` - Zustand state management files (`useAuthStore.js` for JWT handling).
+
+
+## Role-Based Views & Routing
+
+The frontend dynamically routes users to different dashboards based on their authentication role returned from the backend JWT:
+
+1.  **Public/Donor (No Auth Required):** Can freely browse campaigns and donate seamlessly via the Interswitch Checkout modal to reduce friction.
+2.  **Campaign Creator:** Routed to `/creator` to monitor their active medical campaigns.
+3.  **Hospital Admin:** Routed to `/admin` to view 100% funded campaigns and upload stamped medical invoices.
+4.  **Super Admin:** Routed to `/super-admin` to review uploaded invoices and trigger the final Interswitch Payout.
+
