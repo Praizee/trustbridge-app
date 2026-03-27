@@ -12,6 +12,10 @@ This is the frontend repository for **TrustBridge**, built with React and Vite. 
 - **Animations:** Framer Motion
 - **Payment Integration:** Interswitch Web Checkout (Inline WebPay)
 
+## Contributors
+
+- **Stephen Adeniji** - Frontend Lead
+- **Israel Oluniyi** - Frontend Developer
 
 ## Getting Started
 
