@@ -225,7 +225,7 @@ export async function getPendingHospitalRequests() {
  * POST /admin/hospitals/approve.php
  */
 export async function approveHospital(payload) {
-  const data = await apiFetch(`${API_URL}/admin/hospitals/approve.php`, {
+  const data = await apiFetch(`/admin/hospitals/approve.php`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -401,3 +401,4 @@ export async function getCampaignDonations(campaignId) {
   if (Array.isArray(data?.donations)) return data.donations;
   return [];
 }
+
