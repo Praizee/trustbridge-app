@@ -1,0 +1,40 @@
+<script src="https://qa.interswitchng.com/collections/public/javascripts/inline-checkout.js"></script>
+
+<button onclick="pay()">Pay Now</button>
+
+<script>
+async function pay() {
+
+  const res = await fetch("/api/donations/initiate.php", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      amount: 5000,
+      campaign_id: 1,
+      email: "test@mail.com",
+      name: "Ezirim"
+    })
+  });
+
+  const data = await res.json();
+
+  window.webpayCheckout({
+    merchant_code: "MX19437",
+    pay_item_id: "MX19437_MERCHANT_APP",
+    txn_ref: data.reference,
+    amount: data.amount * 100,
+    currency: 566,
+    cust_id: data.email,
+
+    onComplete: function(response) {
+      alert("Payment done");
+
+      fetch(`/api/donations/verify.php?reference=${response.txnref}&amount=5000`)
+        .then(res => res.json())
+        .then(data => console.log(data));
+    },
+
+    mode: "LIVE"
+  });
+}
+</script>
