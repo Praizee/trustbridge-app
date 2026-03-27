@@ -15,7 +15,7 @@ TrustBridge is a secure, B2B2C medical crowdfunding platform designed to complet
 | **Stephen Adeniji**       | Frontend Lead      | Architected Vite/React app, integrated Zustand state, routing, layouts, auth, and built dashboards (creator, hospital, and super admin). |
 | **Israel Oluniyi**        | Frontend Developer | Developed UI components, landing page, explore campaigns, ensured responsiveness, and wired up payment flows. |
 | **Kingdom Ezirim**        | Backend Lead       | Built REST APIs with PHP, JWT auth, hospital verification system, and integrated Interswitch payment & payout systems. |
-| **Muoneke Julia-Frances** | Product Manager    | Defined strategy, user flows, managed sprint, and prepared documentation. |
+| **Julia-Frances Muoneke** | Product Manager    | Defined strategy, user flows, managed sprint, and prepared documentation. |
 
 ---
 
