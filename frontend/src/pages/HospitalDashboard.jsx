@@ -87,21 +87,39 @@ export default function HospitalDashboard() {
     }
   };
 
-  const handleRequestWithdrawal = async (campaign) => {
-    setRequesting((prev) => ({ ...prev, [campaign.id]: true }));
-    try {
-      await requestWithdrawal({
-        campaign_id: campaign.id,
-        amount: campaign.raised_amount,
-      });
-      toast.success("Withdrawal request submitted!");
-      await fetchData();
-    } catch (err) {
-      toast.error(err.message || "Failed to submit withdrawal request.");
-    } finally {
-      setRequesting((prev) => ({ ...prev, [campaign.id]: false }));
-    }
-  };
+ const handleRequestWithdrawal = async (campaign) => {
+  if (!campaign?.id) {
+    toast.error("Invalid campaign.");
+    return;
+  }
+
+  if (!campaign.raised_amount || campaign.raised_amount <= 0) {
+    toast.error("No funds available for withdrawal.");
+    return;
+  }
+
+  if (!campaign.is_fully_funded) {
+    toast.error("Campaign must be fully funded before withdrawal.");
+    return;
+  }
+
+  setRequesting((prev) => ({ ...prev, [campaign.id]: true }));
+
+  try {
+    await requestWithdrawal({
+      campaign_id: Number(campaign.id),
+      amount: Number(campaign.raised_amount),
+    });
+
+    toast.success("Withdrawal request submitted successfully!");
+    await fetchData();
+
+  } catch (err) {
+    toast.error(err.message || "Failed to submit withdrawal request.");
+  } finally {
+    setRequesting((prev) => ({ ...prev, [campaign.id]: false }));
+  }
+};
 
   const isVerified = hospital?.verified === 1;
   const totalRaised = campaigns.reduce((s, c) => s + (c.raised_amount || 0), 0);
@@ -306,7 +324,12 @@ export default function HospitalDashboard() {
                             <TableCell>
                               <Button
                                 size="sm"
-                                disabled={!c.is_fully_funded || !!requesting[c.id]}
+                                disabled={
+  !c.is_fully_funded ||
+  !!requesting[c.id] ||
+  !c.raised_amount ||
+  c.raised_amount <= 0
+}
                                 onClick={() => handleRequestWithdrawal(c)}
                                 className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40"
                               >
