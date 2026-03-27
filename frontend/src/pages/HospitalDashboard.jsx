@@ -87,35 +87,40 @@ export default function HospitalDashboard() {
     }
   };
 
- const handleRequestWithdrawal = async (campaign) => {
+const handleRequestWithdrawal = async (campaign) => {
   if (!campaign?.id) {
-    toast.error("Invalid campaign.");
+    toast.error("Invalid campaign");
     return;
   }
 
   if (!campaign.raised_amount || campaign.raised_amount <= 0) {
-    toast.error("No funds available for withdrawal.");
-    return;
-  }
-
-  if (!campaign.is_fully_funded) {
-    toast.error("Campaign must be fully funded before withdrawal.");
+    toast.error("No funds available");
     return;
   }
 
   setRequesting((prev) => ({ ...prev, [campaign.id]: true }));
 
   try {
-    await requestWithdrawal({
+    const res = await requestWithdrawal({
       campaign_id: Number(campaign.id),
       amount: Number(campaign.raised_amount),
     });
 
-    toast.success("Withdrawal request submitted successfully!");
-    await fetchData();
+    // 🔥 FIX: SAFE CHECK
+    if (!res) {
+      throw new Error("No response from server");
+    }
+
+    if (res.status !== 200) {
+      throw new Error(res.message || "Request failed");
+    }
+
+    toast.success(res.message);
+
+    await fetchData(); // refresh campaigns
 
   } catch (err) {
-    toast.error(err.message || "Failed to submit withdrawal request.");
+    toast.error(err.message || "Something went wrong");
   } finally {
     setRequesting((prev) => ({ ...prev, [campaign.id]: false }));
   }
