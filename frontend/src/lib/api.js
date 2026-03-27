@@ -379,3 +379,16 @@ export async function verifyDonation(reference, amount) {
   return data; // return full body — caller checks data.status === 200
 }
 
+/**
+ * GET /donations/get_campaign_donations.php?campaign_id=:id
+ * Returns list of donors for a campaign.
+ *
+ * @param {number|string} campaignId
+ */
+export async function getCampaignDonations(campaignId) {
+  const data = await apiFetch(`/donations/get_campaign_donations.php?campaign_id=${campaignId}`);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.donations)) return data.donations;
+  return [];
+}

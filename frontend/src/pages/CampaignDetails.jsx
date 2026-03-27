@@ -22,9 +22,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import DonationWidget from "@/components/trustbridge/DonationWidget";
-import { BASE_URL, getCampaignDetails, getCampaignProgress } from "@/lib/api";
-
-const MOCK_DONORS = [];
+import { BASE_URL, getCampaignDetails, getCampaignProgress, getCampaignDonations } from "@/lib/api";
 
 function toFullUrl(path) {
   if (!path) return null;
@@ -34,7 +32,6 @@ function toFullUrl(path) {
 
 function ImageGallery({ cover_image, thumbnail, images }) {
   const allImages = [];
-  // Prefer cover_image, fall back to thumbnail
   const primary = toFullUrl(cover_image) || toFullUrl(thumbnail);
   if (primary) allImages.push(primary);
   if (Array.isArray(images)) {
@@ -121,6 +118,8 @@ export default function CampaignDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("story");
+  const [donors, setDonors] = useState([]);
+  const [donorsLoading, setDonorsLoading] = useState(true);
 
   useEffect(() => {
     if (!id) {
@@ -149,6 +148,13 @@ export default function CampaignDetails() {
         setIsLoading(false);
       });
   }, [id]);
+
+  useEffect(() => {
+    getCampaignDonations(id)
+      .then(setDonors)
+      .catch(() => setDonors([]))
+      .finally(() => setDonorsLoading(false));
+  }, []);
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -269,7 +275,7 @@ export default function CampaignDetails() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-slate-400" />
-                  {MOCK_DONORS.length} donors
+                  {donors.length} donors
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-slate-400" />
@@ -291,7 +297,7 @@ export default function CampaignDetails() {
                     }`}
                   >
                     {tab === "donors"
-                      ? `Donors (${MOCK_DONORS.length})`
+                      ? `Donors (${donors.length})`
                       : tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>
                 ))}
@@ -351,32 +357,7 @@ export default function CampaignDetails() {
                             </p>
                           </div>
                         )}
-                        {/* {campaign.contact_phone && (
-                          <div>
-                            <p className="text-xs text-slate-400 mb-1 uppercase tracking-wide">
-                              Contact
-                            </p>
-                            <a
-                              href={`tel:${campaign.contact_phone}`}
-                              className="font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5"
-                            >
-                              <Phone className="w-3.5 h-3.5" />
-                              {campaign.contact_phone}
-                            </a>
-                          </div>
-                        )} */}
                       </div>
-                      {/* {campaign.medical_document_path && (
-                        <a
-                          href={`${BASE_URL}/${campaign.medical_document_path}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2.5 rounded-xl transition-colors font-medium"
-                        >
-                          <FileText className="w-4 h-4" />
-                          View Medical Document
-                        </a>
-                      )} */}
                     </div>
                   </motion.div>
                 )}
@@ -414,7 +395,13 @@ export default function CampaignDetails() {
                     transition={{ duration: 0.2 }}
                     className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50"
                   >
-                    {MOCK_DONORS.length === 0 ? (
+                    {donorsLoading ? (
+                      <div className="flex flex-col gap-3 p-4">
+                        {[...Array(3)].map((_, i) => (
+                          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                        ))}
+                      </div>
+                    ) : donors.length === 0 ? (
                       <div className="flex flex-col items-center py-10 text-center">
                         <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
                           <Users className="w-5 h-5 text-slate-300" />
@@ -427,20 +414,23 @@ export default function CampaignDetails() {
                         </p>
                       </div>
                     ) : (
-                      MOCK_DONORS.map((donor, i) => (
-                        <div key={i} className="flex items-start gap-4 p-4">
+                      donors.map((donor, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-4 p-4 last:border-0"
+                        >
                           <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center shrink-0">
                             <span className="text-emerald-700 font-bold text-sm">
-                              {donor.name[0]}
+                              {(donor.name || donor.donor_name || "A")[0].toUpperCase()}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-0.5">
                               <span className="font-semibold text-slate-800 text-sm">
-                                {donor.name}
+                                {donor.name || donor.donor_name || "Anonymous"}
                               </span>
                               <span className="text-sm font-bold text-emerald-600 shrink-0">
-                                ₦{donor.amount.toLocaleString()}
+                                ₦{Number(donor.amount).toLocaleString()}
                               </span>
                             </div>
                             {donor.message && (
@@ -449,7 +439,16 @@ export default function CampaignDetails() {
                               </p>
                             )}
                             <p className="text-xs text-slate-400 mt-1">
-                              {donor.time}
+                              {donor.created_at
+                                ? new Date(donor.created_at).toLocaleDateString(
+                                    "en-NG",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    },
+                                  )
+                                : donor.time || ""}
                             </p>
                           </div>
                         </div>
